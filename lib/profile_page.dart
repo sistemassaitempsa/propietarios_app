@@ -143,7 +143,7 @@ class _ProfilePageState extends State<ProfilePage> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 DropdownButtonFormField<String>(
-                  value: type,
+                  initialValue: type,
                   items: ['Carro', 'Moto'].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
                   onChanged: (val) => setDialogState(() => type = val!),
                   decoration: const InputDecoration(labelText: 'Tipo'),
@@ -153,7 +153,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 TextField(controller: plateC, decoration: const InputDecoration(labelText: 'Placa')),
                 const SizedBox(height: 10),
                 DropdownButtonFormField<int>(
-                  value: selectedContactId,
+                  initialValue: selectedContactId,
                   items: _emergencyContacts.map((c) => DropdownMenuItem(value: c['id'] as int, child: Text(c['name']))).toList(),
                   onChanged: (val) => setDialogState(() => selectedContactId = val),
                   decoration: const InputDecoration(labelText: 'Contacto de Emergencia'),
