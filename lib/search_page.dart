@@ -149,17 +149,15 @@ class _SearchPageState extends State<SearchPage> {
                     style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white),
                   ),
                 ),
-                if (hasWhatsapp) ...[
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: () => _sendWhatsApp(_result!['phone']),
-                      icon: const Icon(Icons.message),
-                      label: const Text('WhatsApp'),
-                      style: ElevatedButton.styleFrom(backgroundColor: Colors.teal, foregroundColor: Colors.white),
-                    ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () => _sendWhatsApp(_result!['phone']),
+                    icon: const Icon(Icons.message),
+                    label: const Text('WhatsApp'),
+                    style: ElevatedButton.styleFrom(backgroundColor: Colors.teal, foregroundColor: Colors.white),
                   ),
-                ],
+                ),
               ],
             ),
           ],
