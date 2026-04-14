@@ -146,7 +146,14 @@ class _ProfilePageState extends State<ProfilePage> {
 
     final isEditing = vehicle != null;
     String type = isEditing ? vehicle['type'] : 'Carro';
-    int? selectedContactId = isEditing ? vehicle['emergency_contact_id'] : _emergencyContacts.first['id'];
+    
+    // Check if the saved contact still exists in the current list
+    int? savedContactId = isEditing ? vehicle['emergency_contact_id'] : null;
+    bool contactExists = _emergencyContacts.any((c) => c['id'] == savedContactId);
+    
+    int? selectedContactId = contactExists 
+        ? savedContactId 
+        : _emergencyContacts.first['id'];
     
     final brandC = TextEditingController(text: isEditing ? vehicle['brand'] : '');
     final colorC = TextEditingController(text: isEditing ? vehicle['color'] : '');
@@ -367,8 +374,14 @@ class _ProfilePageState extends State<ProfilePage> {
               if (v['contact_name'] != null)
                 Row(
                   children: [
-                    Text('Emergencia: ${v['contact_name']} ', 
-                         style: const TextStyle(color: Colors.red, fontWeight: FontWeight.w500)),
+                    const Text('Emergencia: ', style: TextStyle(color: Colors.red, fontWeight: FontWeight.w500)),
+                    Expanded(
+                      child: Text(
+                        '${v['contact_name']} ', 
+                        style: const TextStyle(color: Colors.red, fontWeight: FontWeight.w500),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
                     if (v['contact_has_whatsapp'] == 1)
                       const Icon(Icons.message, color: Colors.green, size: 16),
                   ],

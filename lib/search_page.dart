@@ -59,7 +59,7 @@ class _SearchPageState extends State<SearchPage> {
         title: const Text('Consultar Placa'),
         centerTitle: true,
       ),
-      body: Padding(
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(24.0),
         child: Column(
           children: [
