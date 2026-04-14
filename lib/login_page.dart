@@ -108,13 +108,9 @@ class _LoginPageState extends State<LoginPage> {
               const SizedBox(height: 20),
 
               if (_isRegisterMode) ...[
-                Row(
-                  children: [
-                    Expanded(child: _buildTextField(_firstNameController, 'Nombres', Icons.person)),
-                    const SizedBox(width: 10),
-                    Expanded(child: _buildTextField(_lastNameController, 'Apellidos', Icons.person_outline)),
-                  ],
-                ),
+                _buildTextField(_firstNameController, 'Nombres', Icons.person),
+                const SizedBox(height: 16),
+                _buildTextField(_lastNameController, 'Apellidos', Icons.person_outline),
                 const SizedBox(height: 16),
                 _buildTextField(_phoneController, 'Número de Celular', Icons.phone, type: TextInputType.phone),
                 const SizedBox(height: 16),

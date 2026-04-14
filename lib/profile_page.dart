@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'database_helper.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:io';
 
 class ProfilePage extends StatefulWidget {
   final String userEmail;
@@ -22,6 +24,7 @@ class _ProfilePageState extends State<ProfilePage> {
   bool _isPasswordVisible = false;
   bool _isLoading = true;
   int? _userId;
+  String? _profileImagePath;
   List<Map<String, dynamic>> _vehicles = [];
   List<Map<String, dynamic>> _emergencyContacts = [];
 
@@ -42,10 +45,24 @@ class _ProfilePageState extends State<ProfilePage> {
       _towerController.text = userData['tower'] ?? '';
       _apartmentController.text = userData['apartment'] ?? '';
       _passwordController.text = userData['password'] ?? '';
+      _profileImagePath = userData['profileImagePath'];
       
       await _loadEmergencyContacts();
       await _loadVehicles();
       if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _pickImage() async {
+    final ImagePicker picker = ImagePicker();
+    final XFile? image = await picker.pickImage(source: ImageSource.camera);
+    
+    if (image != null) {
+      setState(() {
+        _profileImagePath = image.path;
+      });
+      // Save immediately to DB
+      await _dbHelper.updateUser(widget.userEmail, {'profileImagePath': _profileImagePath});
     }
   }
 
@@ -72,6 +89,7 @@ class _ProfilePageState extends State<ProfilePage> {
       'tower': _towerController.text,
       'apartment': _apartmentController.text,
       'password': _passwordController.text,
+      'profileImagePath': _profileImagePath,
     };
     await _dbHelper.updateUser(widget.userEmail, data);
     _showMsg('Perfil actualizado');
@@ -210,15 +228,49 @@ class _ProfilePageState extends State<ProfilePage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildSectionHeader(Icons.person, 'Datos Personales'),
-            _buildCard([
-              Row(
+            Center(
+              child: Stack(
                 children: [
-                  Expanded(child: _buildTextField(_firstNameController, 'Nombres', Icons.person)),
-                  const SizedBox(width: 10),
-                  Expanded(child: _buildTextField(_lastNameController, 'Apellidos', Icons.person_outline)),
+                  Container(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.indigo, width: 3),
+                    ),
+                    child: CircleAvatar(
+                      radius: 60,
+                      backgroundColor: Colors.grey[300],
+                      backgroundImage: _profileImagePath != null 
+                        ? FileImage(File(_profileImagePath!)) 
+                        : null,
+                      child: _profileImagePath == null 
+                        ? const Icon(Icons.person, size: 80, color: Colors.white) 
+                        : null,
+                    ),
+                  ),
+                  Positioned(
+                    bottom: 0,
+                    right: 0,
+                    child: GestureDetector(
+                      onTap: _pickImage,
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: const BoxDecoration(
+                          color: Colors.indigo,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.camera_alt, color: Colors.white, size: 20),
+                      ),
+                    ),
+                  ),
                 ],
               ),
+            ),
+            const SizedBox(height: 20),
+            _buildSectionHeader(Icons.person, 'Datos Personales'),
+            _buildCard([
+              _buildTextField(_firstNameController, 'Nombres', Icons.person),
+              const SizedBox(height: 12),
+              _buildTextField(_lastNameController, 'Apellidos', Icons.person_outline),
               const SizedBox(height: 12),
               _buildTextField(_phoneController, 'Celular', Icons.phone, type: TextInputType.phone),
               const SizedBox(height: 12),

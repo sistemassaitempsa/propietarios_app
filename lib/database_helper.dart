@@ -18,10 +18,10 @@ class DatabaseHelper {
     String path = join(await getDatabasesPath(), 'user_database.db');
     return await openDatabase(
       path,
-      version: 6,
+      version: 7,
       onCreate: (db, version) async {
         await db.execute(
-          'CREATE TABLE users(id INTEGER PRIMARY KEY AUTOINCREMENT, email TEXT UNIQUE, password TEXT, unit TEXT, tower TEXT, apartment TEXT, firstName TEXT, lastName TEXT, phone TEXT)',
+          'CREATE TABLE users(id INTEGER PRIMARY KEY AUTOINCREMENT, email TEXT UNIQUE, password TEXT, unit TEXT, tower TEXT, apartment TEXT, firstName TEXT, lastName TEXT, phone TEXT, profileImagePath TEXT)',
         );
         await db.execute(
           'CREATE TABLE emergency_contacts(id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, name TEXT, phone TEXT, has_whatsapp INTEGER DEFAULT 0, FOREIGN KEY (user_id) REFERENCES users (id))',
@@ -76,6 +76,9 @@ class DatabaseHelper {
         }
         if (oldVersion < 6) {
           await db.execute('ALTER TABLE emergency_contacts ADD COLUMN has_whatsapp INTEGER DEFAULT 0');
+        }
+        if (oldVersion < 7) {
+          await db.execute('ALTER TABLE users ADD COLUMN profileImagePath TEXT');
         }
       },
     );
