@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'database_helper.dart';
-import 'profile_page.dart';
+import 'home_page.dart';
 import 'search_page.dart';
 
 class LoginPage extends StatefulWidget {
@@ -37,7 +37,7 @@ class _LoginPageState extends State<LoginPage> {
     if (success) {
       Navigator.push(
         context,
-        MaterialPageRoute(builder: (context) => ProfilePage(userEmail: email)),
+        MaterialPageRoute(builder: (context) => HomePage(userEmail: email)),
       );
     } else {
       _showMsg('Correo o contraseña incorrectos');
@@ -149,17 +149,6 @@ class _LoginPageState extends State<LoginPage> {
               TextButton(
                 onPressed: () => setState(() => _isRegisterMode = !_isRegisterMode),
                 child: Text(_isRegisterMode ? '¿Ya tienes cuenta? Inicia sesión' : '¿No tienes cuenta? Regístrate aquí'),
-              ),
-              const Divider(height: 40),
-              OutlinedButton.icon(
-                onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const SearchPage())),
-                icon: const Icon(Icons.search, color: Colors.indigo),
-                label: const Text('CONSULTAR PLACA (PÚBLICO)', style: TextStyle(color: Colors.indigo, fontWeight: FontWeight.bold)),
-                style: OutlinedButton.styleFrom(
-                  side: const BorderSide(color: Colors.indigo),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
-                ),
               ),
             ],
           ),

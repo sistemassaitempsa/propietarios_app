@@ -164,7 +164,7 @@ class DatabaseHelper {
       SELECT ec.name, ec.phone, ec.has_whatsapp, v.brand, v.color, v.type
       FROM vehicles v
       JOIN emergency_contacts ec ON v.emergency_contact_id = ec.id
-      WHERE v.plate = ?
+      WHERE TRIM(UPPER(v.plate)) = ?
     ''', [plate.toUpperCase().trim()]);
     
     return results.isNotEmpty ? results.first : null;

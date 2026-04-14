@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'database_helper.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
+import 'search_page.dart';
 
 class ProfilePage extends StatefulWidget {
   final String userEmail;
@@ -188,7 +189,7 @@ class _ProfilePageState extends State<ProfilePage> {
                     'type': type,
                     'brand': brandC.text,
                     'color': colorC.text,
-                    'plate': plateC.text,
+                    'plate': plateC.text.toUpperCase().trim(),
                     'emergency_contact_id': selectedContactId,
                   };
                   
@@ -222,7 +223,10 @@ class _ProfilePageState extends State<ProfilePage> {
 
     return Scaffold(
       backgroundColor: Colors.grey[100],
-      appBar: AppBar(title: const Text('Mi Perfil'), centerTitle: true),
+      appBar: AppBar(
+        title: const Text('Mi Perfil'), 
+        centerTitle: true,
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20.0),
         child: Column(
