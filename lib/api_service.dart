@@ -49,11 +49,22 @@ class ApiService {
     try {
       final response = await http.post(
         Uri.parse('$baseUrl/users/login'),
-        headers: {'Content-Type': 'application/json'}, // Sin token para login
+        headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'email': email, 'password': password}),
       );
-      return response.statusCode == 200 ? jsonDecode(response.body) : null;
+      
+      final Map<String, dynamic> data = jsonDecode(response.body);
+      
+      if (response.statusCode == 200) {
+        return data;
+      } else if (response.statusCode == 403) {
+        // Cuenta inactiva
+        throw Exception(data['error'] ?? 'Cuenta inactiva');
+      } else {
+        return null;
+      }
     } catch (e) {
+      if (e.toString().contains('inactiva')) rethrow;
       return null;
     }
   }
