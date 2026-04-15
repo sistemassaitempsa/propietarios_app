@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'database_helper.dart';
+import 'api_service.dart';
 
 class SearchPage extends StatefulWidget {
   const SearchPage({super.key});
@@ -12,17 +13,55 @@ class SearchPage extends StatefulWidget {
 class _SearchPageState extends State<SearchPage> {
   final TextEditingController _plateController = TextEditingController();
   final DatabaseHelper _dbHelper = DatabaseHelper();
+  final ApiService _apiService = ApiService();
   Map<String, dynamic>? _result;
   bool _searched = false;
+  bool _isLoading = false;
 
   void _search() async {
     if (_plateController.text.isEmpty) return;
     
-    final result = await _dbHelper.getContactByPlate(_plateController.text);
     setState(() {
-      _result = result;
-      _searched = true;
+      _isLoading = true;
+      _searched = false;
     });
+
+    try {
+      // 1. Intentar buscar en la API (vehículos de otros usuarios)
+      final apiResult = await _apiService.searchByPlate(_plateController.text);
+      
+      if (apiResult != null) {
+        setState(() {
+          _result = apiResult;
+          _isLoading = false;
+          _searched = true;
+        });
+        return;
+      }
+
+      // 2. Si no está en la API, intentar en la base de datos local
+      final localResult = await _dbHelper.getContactByPlate(_plateController.text);
+      
+      setState(() {
+        if (localResult != null) {
+          _result = {
+            'brand': localResult['brand'],
+            'type': localResult['type'],
+            'contact_name': localResult['name'],
+            'contact_phone': localResult['phone'],
+            'has_whatsapp': localResult['has_whatsapp'] == 1,
+            'owner_address': 'Local (Mis datos)',
+          };
+        } else {
+          _result = null;
+        }
+        _isLoading = false;
+        _searched = true;
+      });
+    } catch (e) {
+      setState(() => _isLoading = false);
+      _showError('Error al conectar con el servidor');
+    }
   }
 
   Future<void> _makeCall(String phoneNumber) async {
@@ -86,8 +125,10 @@ class _SearchPageState extends State<SearchPage> {
               width: double.infinity,
               height: 50,
               child: ElevatedButton(
-                onPressed: _search,
-                child: const Text('BUSCAR CONTACTO', style: TextStyle(fontWeight: FontWeight.bold)),
+                onPressed: _isLoading ? null : _search,
+                child: _isLoading 
+                  ? const CircularProgressIndicator(color: Colors.white)
+                  : const Text('BUSCAR CONTACTO', style: TextStyle(fontWeight: FontWeight.bold)),
               ),
             ),
             const SizedBox(height: 30),
@@ -115,7 +156,12 @@ class _SearchPageState extends State<SearchPage> {
       );
     }
 
-    bool hasWhatsapp = _result!['has_whatsapp'] == 1;
+    final bool hasWhatsapp = _result!['has_whatsapp'] == true || _result!['has_whatsapp'] == 1;
+    final String contactName = _result!['contact_name'] ?? 'No disponible';
+    final String contactPhone = _result!['contact_phone'] ?? '';
+    final String ownerInfo = _result!['owner_name'] != null 
+        ? '${_result!['owner_name']} (${_result!['owner_address']})'
+        : _result!['owner_address'] ?? 'Desconocido';
 
     return Card(
       elevation: 4,
@@ -129,35 +175,41 @@ class _SearchPageState extends State<SearchPage> {
               children: [
                 Icon(_result!['type'] == 'Carro' ? Icons.directions_car : Icons.motorcycle, color: Colors.indigo),
                 const SizedBox(width: 10),
-                Text('${_result!['brand']} - ${_plateController.text.toUpperCase()}', 
-                     style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                Expanded(
+                  child: Text('${_result!['brand'] ?? ''} - ${_plateController.text.toUpperCase()}', 
+                       style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                ),
               ],
             ),
+            const SizedBox(height: 5),
+            Text('Propietario: $ownerInfo', style: const TextStyle(fontSize: 14, color: Colors.blueGrey)),
             const Divider(height: 30),
             const Text('CONTACTO DE EMERGENCIA:', style: TextStyle(fontSize: 14, color: Colors.grey, fontWeight: FontWeight.bold)),
             const SizedBox(height: 10),
-            Text(_result!['name'], style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-            Text(_result!['phone'], style: const TextStyle(fontSize: 18, color: Colors.indigo)),
+            Text(contactName, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+            Text(contactPhone, style: const TextStyle(fontSize: 18, color: Colors.indigo)),
             const SizedBox(height: 20),
             Row(
               children: [
                 Expanded(
                   child: ElevatedButton.icon(
-                    onPressed: () => _makeCall(_result!['phone']),
+                    onPressed: contactPhone.isNotEmpty ? () => _makeCall(contactPhone) : null,
                     icon: const Icon(Icons.call),
                     label: const Text('Llamar'),
                     style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white),
                   ),
                 ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: () => _sendWhatsApp(_result!['phone']),
-                    icon: const Icon(Icons.message),
-                    label: const Text('WhatsApp'),
-                    style: ElevatedButton.styleFrom(backgroundColor: Colors.teal, foregroundColor: Colors.white),
+                if (hasWhatsapp) ...[
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: contactPhone.isNotEmpty ? () => _sendWhatsApp(contactPhone) : null,
+                      icon: const Icon(Icons.message),
+                      label: const Text('WhatsApp'),
+                      style: ElevatedButton.styleFrom(backgroundColor: Colors.teal, foregroundColor: Colors.white),
+                    ),
                   ),
-                ),
+                ],
               ],
             ),
           ],
