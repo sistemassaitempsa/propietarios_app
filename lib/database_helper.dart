@@ -158,6 +158,13 @@ class DatabaseHelper {
     return await db.update('vehicles', data, where: 'id = ?', whereArgs: [id]);
   }
 
+  Future<void> clearAllData() async {
+    final db = await database;
+    await db.delete('vehicles');
+    await db.delete('emergency_contacts');
+    await db.delete('users');
+  }
+
   Future<Map<String, dynamic>?> getContactByPlate(String plate) async {
     final db = await database;
     final List<Map<String, dynamic>> results = await db.rawQuery('''
