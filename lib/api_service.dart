@@ -81,6 +81,26 @@ class ApiService {
     }
   }
 
+  Future<String?> uploadProfileImage(int userId, String imagePath) async {
+    try {
+      final headers = await _getHeaders();
+      var request = http.MultipartRequest('POST', Uri.parse('$baseUrl/users/$userId/upload-image'));
+      request.headers.addAll(headers);
+      request.files.add(await http.MultipartFile.fromPath('image', imagePath));
+
+      var streamedResponse = await request.send();
+      var response = await http.Response.fromStream(streamedResponse);
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return data['url']; // Devuelve la URL pública de la imagen
+      }
+      return null;
+    } catch (e) {
+      return null;
+    }
+  }
+
   // --- Contactos de Emergencia ---
 
   Future<List<dynamic>> getEmergencyContacts(int userId) async {
