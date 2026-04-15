@@ -1,92 +1,58 @@
 # Documentación Técnica: Integración API + SQLite
 
-Esta aplicación utiliza un **Patrón de Repositorio** para gestionar los datos. Esto permite que la app funcione tanto online (sincronizando con una API) como offline (usando una base de datos local SQLite).
+Esta aplicación utiliza un **Patrón de Repositorio** para gestionar los datos de forma híbrida (Online/Offline).
 
 ## 1. Archivos Clave
 
 | Archivo | Responsabilidad |
 | :--- | :--- |
-| `lib/api_service.dart` | Comunicación directa con el servidor (HTTP). Maneja el **Token de Autenticación**. |
+| `lib/api_service.dart` | Comunicación directa con el servidor (Laravel). Maneja el **Token JWT**. |
 | `lib/database_helper.dart` | Gestión de la base de datos local **SQLite**. Persistencia offline. |
-| `lib/data_repository.dart` | **Cerebro de la lógica**. Decide si usar la API o la BD local y las sincroniza. |
-| `pubspec.yaml` | Contiene las dependencias `http` y `shared_preferences`. |
+| `lib/data_repository.dart` | Orquestador de la sincronización entre API y SQLite. |
 
 ---
 
 ## 2. Configuración de la API
 
-Para conectar tu servidor real, abre `lib/api_service.dart` y modifica la variable:
+El endpoint del servidor se configura de manera centralizada en `lib/api_service.dart`:
 ```dart
-final String baseUrl = "https://tu-api.com/api"; // Cambia esto por tu URL real
+static const String baseUrl = "http://10.0.2.2:8000/api"; 
 ```
-
-### Seguridad (Token)
-El sistema guarda automáticamente el token en el dispositivo después del login exitoso. Todas las peticiones CRUD incluirán esta cabecera automáticamente:
-`Authorization: Bearer <tu_token>`
+*   **Emulador Android:** Usar `10.0.2.2`.
+*   **Dispositivo Físico:** Usar la IP local de tu PC (ej: `192.168.1.x`).
+*   **Producción:** Usar tu dominio HTTPS.
 
 ---
 
-## 3. Guía de Uso en la Interfaz (UI)
+## 3. Endpoints Utilizados
 
-Para usar la conexión a la API en tus pantallas, sigue estos ejemplos:
-
-### Iniciar Sesión (Login)
-En tu `login_page.dart`, usa el repositorio para validar las credenciales:
-```dart
-final repository = DataRepository();
-
-void _handleLogin() async {
-  var user = await repository.login(emailController.text, passwordController.text);
-  if (user != null) {
-    // Éxito: El token se guardó y los datos se sincronizaron localmente.
-    Navigator.pushReplacementNamed(context, '/home');
-  } else {
-    // Error: Mostrar mensaje al usuario.
-  }
-}
-```
-
-### Actualizar Perfil
-```dart
-final repository = DataRepository();
-
-void _updateData() async {
-  bool success = await repository.updateProfile(userId, email, {
-    'firstName': 'Juan',
-    'phone': '123456789'
-  });
-  
-  if (success) {
-    // Se actualizó en la nube y en la base de datos local.
-  }
-}
-```
-
-### Cerrar Sesión (Logout)
-```dart
-final repository = DataRepository();
-
-void _onLogout() async {
-  await repository.logout();
-  // El token se borró, pero los datos locales se mantienen para consulta offline.
-  Navigator.pushReplacementNamed(context, '/login');
-}
-```
+| Acción | Método | Ruta |
+| :--- | :--- | :--- |
+| Registro | POST | `/users/register` |
+| Login | POST | `/users/login` |
+| Perfil | GET | `/users/{id}` |
+| Actualizar | PUT | `/users/{id}` |
+| Subir Foto | POST | `/users/{id}/upload-image` |
+| Contactos | GET | `/emergency-contacts?user_id={id}` |
+| Vehículos | GET | `/vehicles?user_id={id}` |
+| Buscar Placa| GET | `/search/plate/{plate}` |
 
 ---
 
-## 4. Consideraciones Técnicas
+## 4. Gestión de Archivos (Fotos de Perfil)
 
-1.  **Sincronización**: Al hacer login, el sistema descarga los datos de la API y actualiza la base de datos local (`sqflite`).
-2.  **Modo Offline**: Si el usuario intenta loguearse sin internet, el `DataRepository` consultará la contraseña guardada localmente para permitir el acceso.
-3.  **Formato de Respuesta API**: El sistema espera que el login devuelva un JSON con un campo `token` o `access_token`. Ejemplo:
-    ```json
-    {
-      "id": 1,
-      "email": "user@example.com",
-      "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6..."
-    }
-    ```
+Cuando el usuario sube una foto:
+1.  Se captura con `image_picker`.
+2.  Se envía a la API mediante un `MultipartRequest`.
+3.  El servidor la guarda en `public/uploads/{user_id}/`.
+4.  La API retorna la URL pública que se guarda en SQLite para visualización rápida.
 
 ---
-*Documento generado automáticamente para la integración del CRUD y Auth.*
+
+## 5. Seguridad
+
+- Se utiliza **JWT (JSON Web Tokens)** para proteger las rutas de la API.
+- El token se guarda en `shared_preferences` y se adjunta automáticamente en las cabeceras `Authorization: Bearer <token>`.
+
+---
+*Documento generado automáticamente para la arquitectura de sincronización.*
