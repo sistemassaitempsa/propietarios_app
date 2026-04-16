@@ -33,6 +33,7 @@ static const String baseUrl = "http://10.0.2.2:8000/api";
 | Perfil | GET | `/users/{id}` |
 | Actualizar | PUT | `/users/{id}` |
 | Subir Foto | POST | `/users/{id}/upload-image` |
+| Unidades | GET | `/units` |
 | Contactos | GET | `/emergency-contacts?user_id={id}` |
 | Vehículos | GET | `/vehicles?user_id={id}` |
 | Buscar Placa| GET | `/search/plate/{plate}` |

@@ -30,12 +30,19 @@ La aplicación utiliza un sistema híbrido: **SQLite** para persistencia offline
 | `firstName` | TEXT | Nombres del residente. |
 | `lastName` | TEXT | Apellidos del residente. |
 | `phone` | TEXT | Teléfono principal. |
-| `unit` | TEXT | Conjunto residencial. |
+| `unit_id` | INTEGER | ID de la Unidad residencial (FK). |
 | `tower` | TEXT | Torre / Bloque. |
 | `apartment` | TEXT | Número de apto. |
 | `profileImagePath`| TEXT | Ruta/URL de la foto de perfil. |
 
-#### 2. Tabla: `emergency_contacts`
+#### 2. Tabla: `units` (Conjuntos Residenciales)
+| Campo | Tipo | Descripción |
+| :--- | :--- | :--- |
+| `id` | INTEGER | Clave primaria. |
+| `name` | TEXT | Nombre del conjunto. |
+| `description`| TEXT | Descripción opcional. |
+
+#### 3. Tabla: `emergency_contacts`
 | Campo | Tipo | Descripción |
 | :--- | :--- | :--- |
 | `id` | INTEGER | Clave primaria. |
