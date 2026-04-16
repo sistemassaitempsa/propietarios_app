@@ -4,7 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiService {
   // CONFIGURACIÓN GLOBAL: Cambia esta URL para apuntar a tu servidor
-  static const String baseUrl = "http://10.0.2.2:8000/api"; // 10.0.2.2 es el localhost para el emulador de Android
+  static const String baseUrl = "http://192.168.16.132:8000/api"; // URL del servidor Laravel en la red local
 
   // --- Manejo del Token ---
 
