@@ -17,7 +17,6 @@ class _ProfilePageState extends State<ProfilePage> {
   final TextEditingController _firstNameController = TextEditingController();
   final TextEditingController _lastNameController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
-  final TextEditingController _unitController = TextEditingController();
   final TextEditingController _towerController = TextEditingController();
   final TextEditingController _apartmentController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
@@ -28,6 +27,9 @@ class _ProfilePageState extends State<ProfilePage> {
   String? _profileImagePath;
   List<Map<String, dynamic>> _vehicles = [];
   List<Map<String, dynamic>> _emergencyContacts = [];
+  
+  List<Map<String, dynamic>> _availableUnits = [];
+  int? _selectedUnitId;
 
   @override
   void initState() {
@@ -42,11 +44,16 @@ class _ProfilePageState extends State<ProfilePage> {
       _firstNameController.text = userData['firstName'] ?? '';
       _lastNameController.text = userData['lastName'] ?? '';
       _phoneController.text = userData['phone'] ?? '';
-      _unitController.text = userData['unit'] ?? '';
       _towerController.text = userData['tower'] ?? '';
       _apartmentController.text = userData['apartment'] ?? '';
       _passwordController.text = userData['password'] ?? '';
       _profileImagePath = userData['profileImagePath'];
+      
+      // Load user unit
+      _selectedUnitId = userData['unit_id'];
+
+      // Load all available units
+      _availableUnits = await _dbHelper.getUnits();
       
       await _loadEmergencyContacts();
       await _loadVehicles();
@@ -86,11 +93,11 @@ class _ProfilePageState extends State<ProfilePage> {
       'firstName': _firstNameController.text,
       'lastName': _lastNameController.text,
       'phone': _phoneController.text,
-      'unit': _unitController.text,
       'tower': _towerController.text,
       'apartment': _apartmentController.text,
       'password': _passwordController.text,
       'profileImagePath': _profileImagePath,
+      'unit_id': _selectedUnitId,
     };
     await _dbHelper.updateUser(widget.userEmail, data);
     _showMsg('Perfil actualizado');
@@ -286,6 +293,29 @@ class _ProfilePageState extends State<ProfilePage> {
               _buildTextField(_phoneController, 'Celular', Icons.phone, type: TextInputType.phone),
               const SizedBox(height: 12),
               _buildPasswordField(),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<int>(
+                value: _selectedUnitId,
+                decoration: const InputDecoration(
+                  labelText: 'Unidad/Conjunto',
+                  prefixIcon: Icon(Icons.business, color: Colors.indigo, size: 20),
+                ),
+                items: _availableUnits.map((unit) {
+                  return DropdownMenuItem<int>(
+                    value: unit['id'],
+                    child: Text(unit['name']),
+                  );
+                }).toList(),
+                onChanged: (val) => setState(() => _selectedUnitId = val),
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(child: _buildTextField(_towerController, 'Torre', Icons.apartment)),
+                  const SizedBox(width: 10),
+                  Expanded(child: _buildTextField(_apartmentController, 'Apartamento', Icons.door_front_door)),
+                ],
+              ),
               const SizedBox(height: 15),
               SizedBox(width: double.infinity, child: ElevatedButton(onPressed: _saveProfile, child: const Text('Actualizar Datos'))),
             ]),

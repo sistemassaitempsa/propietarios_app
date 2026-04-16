@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'database_helper.dart';
 import 'home_page.dart';
 import 'search_page.dart';
+import 'api_service.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -16,13 +17,36 @@ class _LoginPageState extends State<LoginPage> {
   final TextEditingController _firstNameController = TextEditingController();
   final TextEditingController _lastNameController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
-  final TextEditingController _unitController = TextEditingController();
   final TextEditingController _towerController = TextEditingController();
   final TextEditingController _apartmentController = TextEditingController();
   
   bool _isPasswordVisible = false;
   bool _isRegisterMode = false;
   final DatabaseHelper _dbHelper = DatabaseHelper();
+  final ApiService _apiService = ApiService();
+
+  List<Map<String, dynamic>> _availableUnits = [];
+  int? _selectedUnitId;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchUnits();
+  }
+
+  Future<void> _fetchUnits() async {
+    // Try to get units from API
+    final units = await _apiService.getUnits();
+    if (units.isNotEmpty) {
+      await _dbHelper.saveUnits(units);
+    }
+    
+    // Load from local DB
+    final localUnits = await _dbHelper.getUnits();
+    setState(() {
+      _availableUnits = localUnits;
+    });
+  }
 
   void _login() async {
     String email = _emailController.text;
@@ -53,6 +77,11 @@ class _LoginPageState extends State<LoginPage> {
       return;
     }
 
+    if (_selectedUnitId == null) {
+      _showMsg('Debes seleccionar una unidad');
+      return;
+    }
+
     int result = await _dbHelper.registerUser(
       email, 
       password,
@@ -60,9 +89,9 @@ class _LoginPageState extends State<LoginPage> {
         'firstName': _firstNameController.text,
         'lastName': _lastNameController.text,
         'phone': _phoneController.text,
-        'unit': _unitController.text,
         'tower': _towerController.text,
         'apartment': _apartmentController.text,
+        'unit_id': _selectedUnitId,
       },
     );
 
@@ -122,7 +151,23 @@ class _LoginPageState extends State<LoginPage> {
               
               if (_isRegisterMode) ...[
                 const SizedBox(height: 16),
-                _buildTextField(_unitController, 'Unidad/Conjunto', Icons.business),
+                DropdownButtonFormField<int>(
+                  value: _selectedUnitId,
+                  decoration: InputDecoration(
+                    labelText: 'Unidad/Conjunto',
+                    filled: true,
+                    fillColor: Colors.white,
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    prefixIcon: const Icon(Icons.business, color: Colors.indigo),
+                  ),
+                  items: _availableUnits.map((unit) {
+                    return DropdownMenuItem<int>(
+                      value: unit['id'],
+                      child: Text(unit['name']),
+                    );
+                  }).toList(),
+                  onChanged: (val) => setState(() => _selectedUnitId = val),
+                ),
                 const SizedBox(height: 16),
                 Row(
                   children: [

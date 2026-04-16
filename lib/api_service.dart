@@ -113,6 +113,24 @@ class ApiService {
     }
   }
 
+  // --- Unidades (Units) ---
+
+  Future<List<dynamic>> getUnits() async {
+    try {
+      final headers = await _getHeaders();
+      final response = await http.get(
+        Uri.parse('$baseUrl/units'),
+        headers: headers,
+      );
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      }
+      return [];
+    } catch (e) {
+      return [];
+    }
+  }
+
   // --- Contactos de Emergencia ---
 
   Future<List<dynamic>> getEmergencyContacts(int userId) async {
