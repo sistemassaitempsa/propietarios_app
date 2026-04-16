@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'database_helper.dart';
 import 'api_service.dart';
+import 'data_repository.dart';
 
 class SearchPage extends StatefulWidget {
   const SearchPage({super.key});
@@ -14,6 +15,7 @@ class _SearchPageState extends State<SearchPage> {
   final TextEditingController _plateController = TextEditingController();
   final DatabaseHelper _dbHelper = DatabaseHelper();
   final ApiService _apiService = ApiService();
+  final DataRepository _repository = DataRepository();
   Map<String, dynamic>? _result;
   bool _searched = false;
   bool _isLoading = false;
@@ -27,34 +29,10 @@ class _SearchPageState extends State<SearchPage> {
     });
 
     try {
-      // 1. Intentar buscar en la API (vehículos de otros usuarios)
-      final apiResult = await _apiService.searchByPlate(_plateController.text);
-      
-      if (apiResult != null) {
-        setState(() {
-          _result = apiResult;
-          _isLoading = false;
-          _searched = true;
-        });
-        return;
-      }
-
-      // 2. Si no está en la API, intentar en la base de datos local
-      final localResult = await _dbHelper.getContactByPlate(_plateController.text);
+      final result = await _repository.searchByPlate(_plateController.text.toUpperCase().trim());
       
       setState(() {
-        if (localResult != null) {
-          _result = {
-            'brand': localResult['brand'],
-            'type': localResult['type'],
-            'contact_name': localResult['name'],
-            'contact_phone': localResult['phone'],
-            'has_whatsapp': localResult['has_whatsapp'] == 1,
-            'owner_address': 'Local (Mis datos)',
-          };
-        } else {
-          _result = null;
-        }
+        _result = result;
         _isLoading = false;
         _searched = true;
       });
