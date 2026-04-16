@@ -172,6 +172,27 @@ class DataRepository {
     return false;
   }
 
+  Future<Map<String, dynamic>?> searchByPlate(String plate) async {
+    // 1. Intentar buscar en la API
+    final apiResult = await _apiService.searchByPlate(plate);
+    if (apiResult != null) return apiResult;
+
+    // 2. Si falla o no encuentra, buscar en local (opcional, dependiendo de si queremos ver nuestros propios vehículos)
+    final localResult = await _dbHelper.getContactByPlate(plate);
+    if (localResult != null) {
+      return {
+        'brand': localResult['brand'],
+        'type': localResult['type'],
+        'contact_name': localResult['name'],
+        'contact_phone': localResult['phone'],
+        'has_whatsapp': localResult['has_whatsapp'] == 1,
+        'owner_address': 'Local (Mis datos)',
+      };
+    }
+    
+    return null;
+  }
+
   Future<void> logout() async {
     await _apiService.clearToken();
     // Los datos locales se mantienen según requerimiento.
