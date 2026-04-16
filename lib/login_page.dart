@@ -3,6 +3,7 @@ import 'database_helper.dart';
 import 'home_page.dart';
 import 'search_page.dart';
 import 'api_service.dart';
+import 'data_repository.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -24,6 +25,7 @@ class _LoginPageState extends State<LoginPage> {
   bool _isRegisterMode = false;
   final DatabaseHelper _dbHelper = DatabaseHelper();
   final ApiService _apiService = ApiService();
+  final DataRepository _repository = DataRepository();
 
   List<Map<String, dynamic>> _availableUnits = [];
   int? _selectedUnitId;
@@ -57,8 +59,8 @@ class _LoginPageState extends State<LoginPage> {
       return;
     }
 
-    bool success = await _dbHelper.loginUser(email, password);
-    if (success) {
+    final response = await _repository.login(email, password);
+    if (response != null) {
       Navigator.push(
         context,
         MaterialPageRoute(builder: (context) => HomePage(userEmail: email)),
@@ -71,8 +73,10 @@ class _LoginPageState extends State<LoginPage> {
   void _register() async {
     String email = _emailController.text;
     String password = _passwordController.text;
+    String firstName = _firstNameController.text;
+    String lastName = _lastNameController.text;
 
-    if (email.isEmpty || password.isEmpty || _firstNameController.text.isEmpty || _lastNameController.text.isEmpty) {
+    if (email.isEmpty || password.isEmpty || firstName.isEmpty || lastName.isEmpty) {
       _showMsg('Nombre, apellido, correo y contraseña son obligatorios');
       return;
     }
@@ -82,24 +86,24 @@ class _LoginPageState extends State<LoginPage> {
       return;
     }
 
-    int result = await _dbHelper.registerUser(
-      email, 
-      password,
-      {
-        'firstName': _firstNameController.text,
-        'lastName': _lastNameController.text,
-        'phone': _phoneController.text,
-        'tower': _towerController.text,
-        'apartment': _apartmentController.text,
-        'unit_id': _selectedUnitId,
-      },
-    );
+    // Preparar datos para la API (necesita 'name') y local
+    Map<String, dynamic> userData = {
+      'name': '$firstName $lastName',
+      'firstName': firstName,
+      'lastName': lastName,
+      'phone': _phoneController.text,
+      'tower': _towerController.text,
+      'apartment': _apartmentController.text,
+      'unit_id': _selectedUnitId,
+    };
 
-    if (result != -1) {
-      _showMsg('Usuario registrado con éxito');
+    bool success = await _repository.register(email, password, userData);
+
+    if (success) {
+      _showMsg('Usuario registrado con éxito en el servidor');
       setState(() => _isRegisterMode = false);
     } else {
-      _showMsg('El correo ya está registrado');
+      _showMsg('Error al registrar usuario. Posiblemente el correo ya existe o falla de conexión.');
     }
   }
 

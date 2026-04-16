@@ -160,6 +160,33 @@ class ApiService {
     }
   }
 
+  Future<bool> updateEmergencyContact(int id, Map<String, dynamic> data) async {
+    try {
+      final headers = await _getHeaders();
+      final response = await http.put(
+        Uri.parse('$baseUrl/emergency-contacts/$id'),
+        headers: headers,
+        body: jsonEncode(data),
+      );
+      return response.statusCode == 200;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  Future<bool> deleteEmergencyContact(int id) async {
+    try {
+      final headers = await _getHeaders();
+      final response = await http.delete(
+        Uri.parse('$baseUrl/emergency-contacts/$id'),
+        headers: headers,
+      );
+      return response.statusCode == 200;
+    } catch (e) {
+      return false;
+    }
+  }
+
   // --- Vehículos ---
 
   Future<List<dynamic>> getVehicles(int userId) async {
@@ -184,6 +211,33 @@ class ApiService {
         body: jsonEncode(vehicleData),
       );
       return response.statusCode == 201;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  Future<bool> updateVehicle(int id, Map<String, dynamic> data) async {
+    try {
+      final headers = await _getHeaders();
+      final response = await http.put(
+        Uri.parse('$baseUrl/vehicles/$id'),
+        headers: headers,
+        body: jsonEncode(data),
+      );
+      return response.statusCode == 200;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  Future<bool> deleteVehicle(int id) async {
+    try {
+      final headers = await _getHeaders();
+      final response = await http.delete(
+        Uri.parse('$baseUrl/vehicles/$id'),
+        headers: headers,
+      );
+      return response.statusCode == 200;
     } catch (e) {
       return false;
     }

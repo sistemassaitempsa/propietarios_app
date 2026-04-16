@@ -20,12 +20,15 @@ class DataRepository {
       }
 
       // 3. Sincronizar con la BD local
+      // Filtrar datos para que solo entren los que la tabla local acepta
+      final localData = _filterLocalData(apiResponse);
+      
       final localUser = await _dbHelper.getUser(email);
       
       if (localUser == null) {
-        await _dbHelper.registerUser(email, password, apiResponse);
+        await _dbHelper.registerUser(email, password, localData);
       } else {
-        await _dbHelper.updateUser(email, apiResponse);
+        await _dbHelper.updateUser(email, localData);
       }
       return apiResponse;
     }
@@ -41,14 +44,36 @@ class DataRepository {
 
   Future<bool> register(String email, String password, Map<String, dynamic> userData) async {
     // 1. Registrar en API
-    final apiResult = await _apiService.registerUser({'email': email, 'password': password, ...userData});
+    // Asegurarse de que el campo 'name' existe para la API (Laravel lo requiere)
+    final apiData = Map<String, dynamic>.from(userData);
+    if (!apiData.containsKey('name') && apiData.containsKey('firstName')) {
+      apiData['name'] = '${apiData['firstName']} ${apiData['lastName'] ?? ''}'.trim();
+    }
+    
+    final apiResult = await _apiService.registerUser({'email': email, 'password': password, ...apiData});
     
     if (apiResult != null) {
       // 2. Guardar en local
-      await _dbHelper.registerUser(email, password, userData);
+      // Filtrar 'name' y otros campos de la API que no existan localmente
+      final localData = _filterLocalData(userData);
+      await _dbHelper.registerUser(email, password, localData);
       return true;
     }
     return false;
+  }
+
+  // Método auxiliar para filtrar campos que no pertenecen a la tabla 'users' local
+  Map<String, dynamic> _filterLocalData(Map<String, dynamic> data) {
+    final allowedKeys = [
+      'unit_id', 'tower', 'apartment', 'firstName', 'lastName', 'phone', 'profileImagePath'
+    ];
+    final Map<String, dynamic> filtered = {};
+    for (var key in allowedKeys) {
+      if (data.containsKey(key)) {
+        filtered[key] = data[key];
+      }
+    }
+    return filtered;
   }
 
   Future<bool> updateProfile(int userId, String email, Map<String, dynamic> data) async {
@@ -72,6 +97,24 @@ class DataRepository {
     if (success) {
       // 2. Agregar a local
       await _dbHelper.addVehicle(userId, vehicleData);
+      return true;
+    }
+    return false;
+  }
+
+  Future<bool> updateVehicle(int id, Map<String, dynamic> vehicleData) async {
+    final success = await _apiService.updateVehicle(id, vehicleData);
+    if (success) {
+      await _dbHelper.updateVehicle(id, vehicleData);
+      return true;
+    }
+    return false;
+  }
+
+  Future<bool> deleteVehicle(int id) async {
+    final success = await _apiService.deleteVehicle(id);
+    if (success) {
+      await _dbHelper.deleteVehicle(id);
       return true;
     }
     return false;
@@ -101,6 +144,29 @@ class DataRepository {
 
     if (success) {
       await _dbHelper.addEmergencyContact(userId, name, phone, hasWhatsapp);
+      return true;
+    }
+    return false;
+  }
+
+  Future<bool> updateEmergencyContact(int id, String name, String phone, bool hasWhatsapp) async {
+    final success = await _apiService.updateEmergencyContact(id, {
+      'name': name,
+      'phone': phone,
+      'has_whatsapp': hasWhatsapp ? 1 : 0
+    });
+
+    if (success) {
+      await _dbHelper.updateEmergencyContact(id, name, phone, hasWhatsapp);
+      return true;
+    }
+    return false;
+  }
+
+  Future<bool> deleteEmergencyContact(int id) async {
+    final success = await _apiService.deleteEmergencyContact(id);
+    if (success) {
+      await _dbHelper.deleteEmergencyContact(id);
       return true;
     }
     return false;

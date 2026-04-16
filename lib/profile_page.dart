@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'database_helper.dart';
+import 'data_repository.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import 'search_page.dart';
@@ -14,6 +15,7 @@ class ProfilePage extends StatefulWidget {
 
 class _ProfilePageState extends State<ProfilePage> {
   final DatabaseHelper _dbHelper = DatabaseHelper();
+  final DataRepository _repository = DataRepository();
   final TextEditingController _firstNameController = TextEditingController();
   final TextEditingController _lastNameController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
@@ -99,8 +101,15 @@ class _ProfilePageState extends State<ProfilePage> {
       'profileImagePath': _profileImagePath,
       'unit_id': _selectedUnitId,
     };
-    await _dbHelper.updateUser(widget.userEmail, data);
-    _showMsg('Perfil actualizado');
+    
+    if (_userId != null) {
+      bool success = await _repository.updateProfile(_userId!, widget.userEmail, data);
+      if (success) {
+        _showMsg('Perfil actualizado en el servidor');
+      } else {
+        _showMsg('Perfil actualizado localmente (error de conexión)');
+      }
+    }
   }
 
   void _addContactDialog() {
@@ -131,8 +140,17 @@ class _ProfilePageState extends State<ProfilePage> {
             TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancelar')),
             ElevatedButton(
               onPressed: () async {
-                if (nameC.text.isNotEmpty && phoneC.text.isNotEmpty) {
-                  await _dbHelper.addEmergencyContact(_userId!, nameC.text, phoneC.text, hasWhatsapp);
+                if (nameC.text.isNotEmpty && phoneC.text.isNotEmpty && _userId != null) {
+                  bool success;
+                  // Si estamos en un diálogo de edición (aunque actualmente el código lo usa solo para nuevo, 
+                  // vamos a prepararlo por si acaso o implementarlo si fuera necesario).
+                  // Como el diálogo actual es solo para agregar, mantendremos la lógica de add,
+                  // pero vamos a asegurar que use el repositorio.
+                  success = await _repository.addEmergencyContact(_userId!, nameC.text, phoneC.text, hasWhatsapp);
+                  
+                  if (success) {
+                    _showMsg('Contacto guardado en el servidor');
+                  }
                   Navigator.pop(context);
                   _loadEmergencyContacts();
                 }
@@ -198,7 +216,7 @@ class _ProfilePageState extends State<ProfilePage> {
             TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancelar')),
             ElevatedButton(
               onPressed: () async {
-                if (brandC.text.isNotEmpty && plateC.text.isNotEmpty) {
+                if (brandC.text.isNotEmpty && plateC.text.isNotEmpty && _userId != null) {
                   final data = {
                     'type': type,
                     'brand': brandC.text,
@@ -207,12 +225,13 @@ class _ProfilePageState extends State<ProfilePage> {
                     'emergency_contact_id': selectedContactId,
                   };
                   
+                  bool success;
                   if (isEditing) {
-                    await _dbHelper.updateVehicle(vehicle['id'], data);
-                    _showMsg('Vehículo actualizado');
+                    success = await _repository.updateVehicle(vehicle['id'], data);
+                    if (success) _showMsg('Vehículo actualizado en el servidor');
                   } else {
-                    await _dbHelper.addVehicle(_userId!, data);
-                    _showMsg('Vehículo agregado');
+                    success = await _repository.addVehicle(_userId!, data);
+                    if (success) _showMsg('Vehículo guardado en el servidor');
                   }
                   
                   if (mounted) Navigator.pop(context);
@@ -381,7 +400,8 @@ class _ProfilePageState extends State<ProfilePage> {
           ),
           subtitle: Text(c['phone']),
           trailing: IconButton(icon: const Icon(Icons.delete, color: Colors.grey), onPressed: () async {
-            await _dbHelper.deleteEmergencyContact(c['id']);
+            bool success = await _repository.deleteEmergencyContact(c['id']);
+            if (success) _showMsg('Contacto eliminado del servidor');
             _loadEmergencyContacts();
             _loadVehicles();
           }),
@@ -423,7 +443,8 @@ class _ProfilePageState extends State<ProfilePage> {
             children: [
               IconButton(icon: const Icon(Icons.edit, color: Colors.blue), onPressed: () => _vehicleFormDialog(vehicle: v)),
               IconButton(icon: const Icon(Icons.delete, color: Colors.grey), onPressed: () async {
-                await _dbHelper.deleteVehicle(v['id']);
+                bool success = await _repository.deleteVehicle(v['id']);
+                if (success) _showMsg('Vehículo eliminado del servidor');
                 _loadVehicles();
               }),
             ],
