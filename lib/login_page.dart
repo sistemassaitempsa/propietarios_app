@@ -53,6 +53,7 @@ class _LoginPageState extends State<LoginPage> {
         _isLoadingUnits = false;
       });
     } catch (e) {
+      print("Error al cargar unidades: $e");
       setState(() => _isLoadingUnits = false);
     }
   }
