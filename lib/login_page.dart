@@ -201,7 +201,9 @@ class _LoginPageState extends State<LoginPage> {
   DropdownButtonFormField<int> _buildUnitDropdown() {
     return DropdownButtonFormField<int>(
       value: _selectedUnitId,
-      icon: Icon(Icons.keyboard_arrow_down_rounded, color: Colors.blueGrey[400]),
+      icon: _isLoadingUnits 
+        ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+        : Icon(Icons.keyboard_arrow_down_rounded, color: Colors.blueGrey[400]),
       decoration: InputDecoration(
         labelText: 'Unidad/Conjunto',
         labelStyle: TextStyle(color: Colors.blueGrey[400], fontSize: 14),
@@ -213,18 +215,16 @@ class _LoginPageState extends State<LoginPage> {
           borderRadius: BorderRadius.circular(16),
           borderSide: BorderSide.none,
         ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: BorderSide.none,
-        ),
       ),
-      items: _availableUnits.map((unit) {
-        return DropdownMenuItem<int>(
-          value: unit['id'],
-          child: Text(unit['name'], style: const TextStyle(fontSize: 15)),
-        );
-      }).toList(),
-      onChanged: (val) => setState(() => _selectedUnitId = val),
+      items: _availableUnits.isEmpty 
+        ? [const DropdownMenuItem(value: null, child: Text('No hay unidades disponibles', style: TextStyle(color: Colors.red)))]
+        : _availableUnits.map((unit) {
+            return DropdownMenuItem<int>(
+              value: unit['id'],
+              child: Text(unit['name'], style: const TextStyle(fontSize: 15)),
+            );
+          }).toList(),
+      onChanged: _isLoadingUnits ? null : (val) => setState(() => _selectedUnitId = val),
     );
   }
 
