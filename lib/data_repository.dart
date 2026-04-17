@@ -13,22 +13,23 @@ class DataRepository {
     
     if (apiResponse != null) {
       // 2. Si la API devuelve un token, guardarlo automáticamente
-      if (apiResponse.containsKey('token')) {
-        await _apiService.saveToken(apiResponse['token']);
-      } else if (apiResponse.containsKey('access_token')) {
+      if (apiResponse.containsKey('access_token')) {
         await _apiService.saveToken(apiResponse['access_token']);
       }
 
       // 3. Sincronizar con la BD local
-      // Filtrar datos para que solo entren los que la tabla local acepta
-      final localData = _filterLocalData(apiResponse);
-      
-      final localUser = await _dbHelper.getUser(email);
-      
-      if (localUser == null) {
-        await _dbHelper.registerUser(email, password, localData);
-      } else {
-        await _dbHelper.updateUser(email, localData);
+      // El objeto user ahora viene dentro de la respuesta
+      if (apiResponse.containsKey('user')) {
+        final userData = apiResponse['user'];
+        final localData = _filterLocalData(userData);
+        
+        final localUser = await _dbHelper.getUser(email);
+        
+        if (localUser == null) {
+          await _dbHelper.registerUser(email, password, localData);
+        } else {
+          await _dbHelper.updateUser(email, localData);
+        }
       }
       return apiResponse;
     }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'profile_page.dart';
 import 'search_page.dart';
+import 'residents_page.dart';
 
 class HomePage extends StatefulWidget {
   final String userEmail;
@@ -20,6 +21,7 @@ class _HomePageState extends State<HomePage> {
     _pages = [
       ProfilePage(userEmail: widget.userEmail),
       const SearchPage(),
+      const ResidentsPage(),
     ];
   }
 
@@ -40,6 +42,7 @@ class _HomePageState extends State<HomePage> {
         currentIndex: _selectedIndex,
         onTap: _onItemTapped,
         selectedItemColor: Colors.indigo,
+        type: BottomNavigationBarType.fixed,
         items: const [
           BottomNavigationBarItem(
             icon: Icon(Icons.person),
@@ -48,6 +51,10 @@ class _HomePageState extends State<HomePage> {
           BottomNavigationBarItem(
             icon: Icon(Icons.search),
             label: 'Consulta Placa',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.groups_rounded),
+            label: 'Mi Apto',
           ),
         ],
       ),

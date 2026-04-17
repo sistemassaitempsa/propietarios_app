@@ -4,7 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiService {
   // CONFIGURACIÓN GLOBAL: Cambia esta URL para apuntar a tu servidor
-  static const String baseUrl = "http://192.168.16.132:8000/api"; // URL del servidor Laravel en la red local
+  static const String baseUrl = "http://192.168.16.132:8000/api"; // Cambia a http://10.0.2.2:8000/api si usas emulador Android
 
   // --- Manejo del Token ---
 
@@ -47,6 +47,7 @@ class ApiService {
 
   Future<Map<String, dynamic>?> loginUser(String email, String password) async {
     try {
+
       final response = await http.post(
         Uri.parse('$baseUrl/users/login'),
         headers: {'Content-Type': 'application/json'},
@@ -66,6 +67,26 @@ class ApiService {
     } catch (e) {
       if (e.toString().contains('inactiva')) rethrow;
       return null;
+    }
+  }
+
+  Future<List<dynamic>> getNeighbors() async {
+    try {
+      final headers = await _getHeaders();
+      final response = await http.get(Uri.parse('$baseUrl/users/neighbors'), headers: headers);
+      return response.statusCode == 200 ? jsonDecode(response.body) : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  Future<bool> reportUser(int userId) async {
+    try {
+      final headers = await _getHeaders();
+      final response = await http.post(Uri.parse('$baseUrl/users/$userId/report'), headers: headers);
+      return response.statusCode == 200;
+    } catch (e) {
+      return false;
     }
   }
 

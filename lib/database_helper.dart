@@ -129,6 +129,15 @@ class DatabaseHelper {
     return await db.query('emergency_contacts', where: 'user_id = ?', whereArgs: [userId]);
   }
 
+  Future<int> updateEmergencyContact(int id, String name, String phone, bool hasWhatsapp) async {
+    final db = await database;
+    return await db.update('emergency_contacts', {
+      'name': name,
+      'phone': phone,
+      'has_whatsapp': hasWhatsapp ? 1 : 0
+    }, where: 'id = ?', whereArgs: [id]);
+  }
+
   Future<int> deleteEmergencyContact(int id) async {
     final db = await database;
     return await db.delete('emergency_contacts', where: 'id = ?', whereArgs: [id]);
