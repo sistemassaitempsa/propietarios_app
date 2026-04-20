@@ -83,7 +83,16 @@ class DatabaseHelper {
   Future<int> registerUser(String email, String password, Map<String, dynamic> extraData) async {
     final db = await database;
     try {
-      return await db.insert('users', {'email': email, 'password': password, ...extraData});
+      return await db.insert('users', {'email': email, 'password': password, ...extraData}, conflictAlgorithm: ConflictAlgorithm.replace);
+    } catch (e) {
+      return -1;
+    }
+  }
+
+  Future<int> registerUserWithId(int id, String email, String password, Map<String, dynamic> extraData) async {
+    final db = await database;
+    try {
+      return await db.insert('users', {'id': id, 'email': email, 'password': password, ...extraData}, conflictAlgorithm: ConflictAlgorithm.replace);
     } catch (e) {
       return -1;
     }
@@ -124,6 +133,17 @@ class DatabaseHelper {
     });
   }
 
+  Future<int> addEmergencyContactWithId(int id, int userId, String name, String phone, bool hasWhatsapp) async {
+    final db = await database;
+    return await db.insert('emergency_contacts', {
+      'id': id,
+      'user_id': userId,
+      'name': name,
+      'phone': phone,
+      'has_whatsapp': hasWhatsapp ? 1 : 0
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
+  }
+
   Future<List<Map<String, dynamic>>> getEmergencyContacts(int userId) async {
     final db = await database;
     return await db.query('emergency_contacts', where: 'user_id = ?', whereArgs: [userId]);
@@ -147,6 +167,15 @@ class DatabaseHelper {
   Future<int> addVehicle(int userId, Map<String, dynamic> vehicle) async {
     final db = await database;
     return await db.insert('vehicles', {...vehicle, 'user_id': userId});
+  }
+
+  Future<int> addVehicleWithId(int id, int userId, Map<String, dynamic> vehicle) async {
+    final db = await database;
+    return await db.insert('vehicles', {
+      'id': id,
+      ...vehicle, 
+      'user_id': userId
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
   Future<List<Map<String, dynamic>>> getVehiclesWithContacts(int userId) async {

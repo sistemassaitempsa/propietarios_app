@@ -53,11 +53,18 @@ class DataRepository {
     
     final apiResult = await _apiService.registerUser({'email': email, 'password': password, ...apiData});
     
-    if (apiResult != null) {
-      // 2. Guardar en local
-      // Filtrar 'name' y otros campos de la API que no existan localmente
-      final localData = _filterLocalData(userData);
-      await _dbHelper.registerUser(email, password, localData);
+    if (apiResult != null && apiResult.containsKey('user')) {
+      // 2. Guardar en local con el ID de la API
+      final remoteUserData = apiResult['user'];
+      final localData = _filterLocalData(remoteUserData);
+      
+      // Intentar actualizar si ya existe o registrar nuevo
+      final existingUser = await _dbHelper.getUser(email);
+      if (existingUser != null) {
+        await _dbHelper.updateUser(email, localData);
+      } else {
+        await _dbHelper.registerUser(email, password, localData);
+      }
       return true;
     }
     return false;
@@ -66,7 +73,7 @@ class DataRepository {
   // Método auxiliar para filtrar campos que no pertenecen a la tabla 'users' local
   Map<String, dynamic> _filterLocalData(Map<String, dynamic> data) {
     final allowedKeys = [
-      'unit_id', 'tower', 'apartment', 'firstName', 'lastName', 'phone', 'profileImagePath'
+      'id', 'unit_id', 'tower', 'apartment', 'firstName', 'lastName', 'phone', 'profileImagePath'
     ];
     final Map<String, dynamic> filtered = {};
     for (var key in allowedKeys) {
@@ -93,11 +100,11 @@ class DataRepository {
 
   Future<bool> addVehicle(int userId, Map<String, dynamic> vehicleData) async {
     // 1. Agregar a API
-    final success = await _apiService.addVehicle({'user_id': userId, ...vehicleData});
+    final apiResult = await _apiService.addVehicle({'user_id': userId, ...vehicleData});
     
-    if (success) {
-      // 2. Agregar a local
-      await _dbHelper.addVehicle(userId, vehicleData);
+    if (apiResult != null) {
+      // 2. Agregar a local con el ID de la API
+      await _dbHelper.addVehicleWithId(apiResult['id'], userId, vehicleData);
       return true;
     }
     return false;
@@ -136,15 +143,15 @@ class DataRepository {
   // --- Contactos de Emergencia ---
 
   Future<bool> addEmergencyContact(int userId, String name, String phone, bool hasWhatsapp) async {
-    final success = await _apiService.addEmergencyContact({
+    final apiResult = await _apiService.addEmergencyContact({
       'user_id': userId,
       'name': name,
       'phone': phone,
       'has_whatsapp': hasWhatsapp ? 1 : 0
     });
 
-    if (success) {
-      await _dbHelper.addEmergencyContact(userId, name, phone, hasWhatsapp);
+    if (apiResult != null) {
+      await _dbHelper.addEmergencyContactWithId(apiResult['id'], userId, name, phone, hasWhatsapp);
       return true;
     }
     return false;

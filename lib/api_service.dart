@@ -192,7 +192,7 @@ class ApiService {
     }
   }
 
-  Future<bool> addEmergencyContact(Map<String, dynamic> contactData) async {
+  Future<Map<String, dynamic>?> addEmergencyContact(Map<String, dynamic> contactData) async {
     try {
       final headers = await _getHeaders();
       final response = await http.post(
@@ -200,9 +200,9 @@ class ApiService {
         headers: headers,
         body: jsonEncode(contactData),
       );
-      return response.statusCode == 201;
+      return response.statusCode == 201 ? jsonDecode(response.body) : null;
     } catch (e) {
-      return false;
+      return null;
     }
   }
 
@@ -248,7 +248,7 @@ class ApiService {
     }
   }
 
-  Future<bool> addVehicle(Map<String, dynamic> vehicleData) async {
+  Future<Map<String, dynamic>?> addVehicle(Map<String, dynamic> vehicleData) async {
     try {
       final headers = await _getHeaders();
       final response = await http.post(
@@ -256,9 +256,9 @@ class ApiService {
         headers: headers,
         body: jsonEncode(vehicleData),
       );
-      return response.statusCode == 201;
+      return response.statusCode == 201 ? jsonDecode(response.body) : null;
     } catch (e) {
-      return false;
+      return null;
     }
   }
 
