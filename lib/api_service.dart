@@ -100,6 +100,19 @@ class ApiService {
     }
   }
 
+  Future<bool> activateUser(int userId) async {
+    try {
+      final headers = await _getHeaders();
+      final response = await http.post(
+        Uri.parse('$baseUrl/users/$userId/activate'),
+        headers: headers,
+      );
+      return response.statusCode == 200;
+    } catch (e) {
+      return false;
+    }
+  }
+
   Future<Map<String, dynamic>?> getUserProfile(int userId) async {
     try {
       final headers = await _getHeaders();

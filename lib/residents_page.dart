@@ -95,7 +95,40 @@ class _ResidentsPageState extends State<ResidentsPage> {
     }
   }
 
+  Future<void> _activateResident(Map<String, dynamic> resident) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Activar Cuenta'),
+        content: Text('¿Deseas activar la cuenta de ${resident['firstName']}? Esto le permitirá iniciar sesión y gestionar sus datos.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('CANCELAR')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true), 
+            style: TextButton.styleFrom(foregroundColor: Colors.green),
+            child: const Text('ACTIVAR'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      final success = await _apiService.activateUser(resident['id']);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(success ? 'Cuenta activada correctamente' : 'Error al activar la cuenta'),
+            backgroundColor: success ? Colors.green : Colors.red,
+          ),
+        );
+        if (success) _loadResidents();
+      }
+    }
+  }
+
   Widget _buildResidentCard(Map<String, dynamic> resident) {
+    bool isActive = resident['active'] == true || resident['active'] == 1;
+
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
@@ -108,22 +141,70 @@ class _ResidentsPageState extends State<ResidentsPage> {
       child: Theme(
         data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
         child: ExpansionTile(
-          leading: CircleAvatar(
-            backgroundColor: Colors.indigo[50],
-            child: Text(
-              (resident['firstName'] ?? 'U')[0].toUpperCase(),
-              style: const TextStyle(color: Colors.indigo, fontWeight: FontWeight.bold),
-            ),
+          leading: Stack(
+            children: [
+              CircleAvatar(
+                backgroundColor: Colors.indigo[50],
+                child: Text(
+                  (resident['firstName'] ?? 'U')[0].toUpperCase(),
+                  style: const TextStyle(color: Colors.indigo, fontWeight: FontWeight.bold),
+                ),
+              ),
+              if (!isActive)
+                Positioned(
+                  right: 0,
+                  bottom: 0,
+                  child: Container(
+                    width: 12,
+                    height: 12,
+                    decoration: BoxDecoration(
+                      color: Colors.orange,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 2),
+                    ),
+                  ),
+                ),
+            ],
           ),
-          title: Text(
-            '${resident['firstName'] ?? ''} ${resident['lastName'] ?? ''}',
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+          title: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  '${resident['firstName'] ?? ''} ${resident['lastName'] ?? ''}',
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                ),
+              ),
+              if (!isActive)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: Colors.orange[50],
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: Colors.orange[200]!),
+                  ),
+                  child: const Text(
+                    'INACTIVO',
+                    style: TextStyle(color: Colors.orange, fontSize: 10, fontWeight: FontWeight.bold),
+                  ),
+                ),
+            ],
           ),
           subtitle: Text(resident['email'] ?? '', style: TextStyle(color: Colors.blueGrey[400], fontSize: 13)),
-          trailing: IconButton(
-            icon: const Icon(Icons.report_gmailerrorred_rounded, color: Colors.redAccent),
-            onPressed: () => _reportResident(resident),
-            tooltip: 'Reportar cuenta',
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (!isActive)
+                IconButton(
+                  icon: const Icon(Icons.check_circle_outline, color: Colors.green),
+                  onPressed: () => _activateResident(resident),
+                  tooltip: 'Activar cuenta',
+                ),
+              IconButton(
+                icon: const Icon(Icons.report_gmailerrorred_rounded, color: Colors.redAccent),
+                onPressed: () => _reportResident(resident),
+                tooltip: 'Reportar cuenta',
+              ),
+            ],
           ),
           children: [
             Padding(
