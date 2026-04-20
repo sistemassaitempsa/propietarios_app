@@ -67,15 +67,48 @@ class _LoginPageState extends State<LoginPage> {
       return;
     }
 
-    final response = await _repository.login(email, password);
-    if (response != null) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => HomePage(userEmail: email)),
-      );
-    } else {
-      _showMsg('Correo o contraseña incorrectos');
+    try {
+      final response = await _repository.login(email, password);
+      if (response != null) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => HomePage(userEmail: email)),
+        );
+      } else {
+        _showMsg('Correo o contraseña incorrectos');
+      }
+    } catch (e) {
+      if (e.toString().contains('inactiva')) {
+        _showInactiveAccountDialog();
+      } else {
+        _showMsg('Error al iniciar sesión: $e');
+      }
     }
+  }
+
+  void _showInactiveAccountDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: Colors.orange),
+            SizedBox(width: 10),
+            Text('Cuenta Inactiva'),
+          ],
+        ),
+        content: const Text(
+          'Tu cuenta aún no ha sido activada.\n\nPor favor, contacta al propietario o a un residente actual de tu apartamento para que active tu cuenta desde su aplicación.',
+          style: TextStyle(fontSize: 15),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('ENTENDIDO'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _register() async {
