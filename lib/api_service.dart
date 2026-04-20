@@ -4,14 +4,15 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiService {
   // CONFIGURACIÓN GLOBAL: Cambia esta URL para apuntar a tu servidor
-  static const String baseUrl = "http://192.168.16.132:8000/api"; // Cambia a http://10.0.2.2:8000/api si usas emulador Android
+  static const String baseUrl =
+      "http://10.0.2.2:8000/api"; // Cambia a http://10.0.2.2:8000/api si usas emulador Android
 
   // --- Manejo del Token ---
 
   Future<Map<String, String>> _getHeaders() async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('auth_token');
-    
+
     final headers = {'Content-Type': 'application/json'};
     if (token != null) {
       headers['Authorization'] = 'Bearer $token';
@@ -31,7 +32,9 @@ class ApiService {
 
   // --- Usuarios (Users) ---
 
-  Future<Map<String, dynamic>?> registerUser(Map<String, dynamic> userData) async {
+  Future<Map<String, dynamic>?> registerUser(
+    Map<String, dynamic> userData,
+  ) async {
     try {
       final headers = await _getHeaders();
       final response = await http.post(
@@ -39,23 +42,24 @@ class ApiService {
         headers: headers,
         body: jsonEncode(userData),
       );
-      return response.statusCode == 201 ? jsonDecode(response.body) : null;
+      return jsonDecode(response.body);
     } catch (e) {
       return null;
     }
   }
 
   Future<Map<String, dynamic>?> loginUser(String email, String password) async {
+    print('📡 logueando al usuario: $email');
     try {
-
       final response = await http.post(
         Uri.parse('$baseUrl/users/login'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'email': email, 'password': password}),
       );
-      
+
       final Map<String, dynamic> data = jsonDecode(response.body);
-      
+      print('📡 respuesta del servidor: $data');
+
       if (response.statusCode == 200) {
         return data;
       } else if (response.statusCode == 403) {
@@ -73,7 +77,10 @@ class ApiService {
   Future<List<dynamic>> getNeighbors() async {
     try {
       final headers = await _getHeaders();
-      final response = await http.get(Uri.parse('$baseUrl/users/neighbors'), headers: headers);
+      final response = await http.get(
+        Uri.parse('$baseUrl/users/neighbors'),
+        headers: headers,
+      );
       return response.statusCode == 200 ? jsonDecode(response.body) : [];
     } catch (e) {
       return [];
@@ -83,7 +90,10 @@ class ApiService {
   Future<bool> reportUser(int userId) async {
     try {
       final headers = await _getHeaders();
-      final response = await http.post(Uri.parse('$baseUrl/users/$userId/report'), headers: headers);
+      final response = await http.post(
+        Uri.parse('$baseUrl/users/$userId/report'),
+        headers: headers,
+      );
       return response.statusCode == 200;
     } catch (e) {
       return false;
@@ -93,7 +103,10 @@ class ApiService {
   Future<Map<String, dynamic>?> getUserProfile(int userId) async {
     try {
       final headers = await _getHeaders();
-      final response = await http.get(Uri.parse('$baseUrl/users/$userId'), headers: headers);
+      final response = await http.get(
+        Uri.parse('$baseUrl/users/$userId'),
+        headers: headers,
+      );
       return response.statusCode == 200 ? jsonDecode(response.body) : null;
     } catch (e) {
       return null;
@@ -103,13 +116,22 @@ class ApiService {
   Future<bool> updateUser(int userId, Map<String, dynamic> data) async {
     try {
       final headers = await _getHeaders();
+
+      print('🚀 Enviando update a: $userId');
+      print('📤 Data: $data');
+
       final response = await http.put(
         Uri.parse('$baseUrl/users/$userId'),
         headers: headers,
         body: jsonEncode(data),
       );
-      return response.statusCode == 200;
+
+      print('📡 Status: ${response.statusCode}');
+      print('📦 Body: ${response.body}');
+
+      return response.statusCode >= 200 && response.statusCode < 300;
     } catch (e) {
+      print('💥 Error updateUser: $e');
       return false;
     }
   }
@@ -117,7 +139,10 @@ class ApiService {
   Future<String?> uploadProfileImage(int userId, String imagePath) async {
     try {
       final headers = await _getHeaders();
-      var request = http.MultipartRequest('POST', Uri.parse('$baseUrl/users/$userId/upload-image'));
+      var request = http.MultipartRequest(
+        'POST',
+        Uri.parse('$baseUrl/users/$userId/upload-image'),
+      );
       request.headers.addAll(headers);
       request.files.add(await http.MultipartFile.fromPath('image', imagePath));
 
@@ -159,7 +184,7 @@ class ApiService {
       final headers = await _getHeaders();
       final response = await http.get(
         Uri.parse('$baseUrl/emergency-contacts?user_id=$userId'),
-        headers: headers
+        headers: headers,
       );
       return response.statusCode == 200 ? jsonDecode(response.body) : [];
     } catch (e) {
@@ -215,7 +240,7 @@ class ApiService {
       final headers = await _getHeaders();
       final response = await http.get(
         Uri.parse('$baseUrl/vehicles?user_id=$userId'),
-        headers: headers
+        headers: headers,
       );
       return response.statusCode == 200 ? jsonDecode(response.body) : [];
     } catch (e) {
@@ -269,7 +294,7 @@ class ApiService {
       final headers = await _getHeaders();
       final response = await http.get(
         Uri.parse('$baseUrl/search/plate/$plate'),
-        headers: headers
+        headers: headers,
       );
       return response.statusCode == 200 ? jsonDecode(response.body) : null;
     } catch (e) {
