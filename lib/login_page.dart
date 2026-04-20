@@ -5,6 +5,9 @@ import 'search_page.dart';
 import 'api_service.dart';
 import 'data_repository.dart';
 
+import 'package:flutter/gestures.dart';
+import 'package:url_launcher/url_launcher.dart';
+
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
 
@@ -30,11 +33,19 @@ class _LoginPageState extends State<LoginPage> {
   bool _isLoadingUnits = false;
   List<Map<String, dynamic>> _availableUnits = [];
   int? _selectedUnitId;
+  bool _isAcceptedTerms = false;
 
   @override
   void initState() {
     super.initState();
     _fetchUnits();
+  }
+
+  Future<void> _launchPolicy() async {
+    final Uri url = Uri.parse('https://www.sic.gov.co/sobre-la-proteccion-de-datos-personales');
+    if (!await launchUrl(url)) {
+      _showMsg('No se pudo abrir el enlace');
+    }
   }
 
   Future<void> _fetchUnits() async {
@@ -127,6 +138,11 @@ class _LoginPageState extends State<LoginPage> {
       return;
     }
 
+    if (!_isAcceptedTerms) {
+      _showMsg('Debes aceptar la política de tratamiento de datos personales');
+      return;
+    }
+
     // Preparar datos para la API (necesita 'name') y local
     Map<String, dynamic> userData = {
       'name': '$firstName $lastName',
@@ -142,10 +158,53 @@ class _LoginPageState extends State<LoginPage> {
 
     if (success) {
       _showMsg('Usuario registrado con éxito en el servidor');
-      setState(() => _isRegisterMode = false);
+      setState(() {
+        _isRegisterMode = false;
+        _isAcceptedTerms = false; // Reset for next time
+      });
     } else {
       _showMsg('Error al registrar usuario. Posiblemente el correo ya existe o falla de conexión.');
     }
+  }
+
+  Widget _buildTermsCheckbox() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        children: [
+          SizedBox(
+            height: 24,
+            width: 24,
+            child: Checkbox(
+              value: _isAcceptedTerms,
+              activeColor: Colors.indigo,
+              onChanged: (val) => setState(() => _isAcceptedTerms = val!),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: RichText(
+              text: TextSpan(
+                style: TextStyle(color: Colors.blueGrey[600], fontSize: 13),
+                children: [
+                  const TextSpan(text: 'Acepto la '),
+                  TextSpan(
+                    text: 'Política de Tratamiento de Datos Personales',
+                    style: const TextStyle(
+                      color: Colors.indigo,
+                      fontWeight: FontWeight.bold,
+                      decoration: TextDecoration.underline,
+                    ),
+                    recognizer: TapGestureRecognizer()..onTap = _launchPolicy,
+                  ),
+                  const TextSpan(text: ' según la regulación de Colombia.'),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   void _showMsg(String msg) {
