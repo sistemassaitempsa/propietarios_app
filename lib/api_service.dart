@@ -49,7 +49,6 @@ class ApiService {
   }
 
   Future<Map<String, dynamic>?> loginUser(String email, String password) async {
-    print('📡 logueando al usuario: $email');
     try {
       final response = await http.post(
         Uri.parse('$baseUrl/users/login'),
@@ -58,7 +57,6 @@ class ApiService {
       );
 
       final Map<String, dynamic> data = jsonDecode(response.body);
-      print('📡 respuesta del servidor: $data');
 
       if (response.statusCode == 200) {
         return data;
@@ -129,18 +127,11 @@ class ApiService {
   Future<bool> updateUser(int userId, Map<String, dynamic> data) async {
     try {
       final headers = await _getHeaders();
-
-      print('🚀 Enviando update a: $userId');
-      print('📤 Data: $data');
-
       final response = await http.put(
         Uri.parse('$baseUrl/users/$userId'),
         headers: headers,
         body: jsonEncode(data),
       );
-
-      print('📡 Status: ${response.statusCode}');
-      print('📦 Body: ${response.body}');
 
       return response.statusCode >= 200 && response.statusCode < 300;
     } catch (e) {

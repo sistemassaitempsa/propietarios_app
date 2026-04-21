@@ -5,6 +5,9 @@ import 'search_page.dart';
 import 'api_service.dart';
 import 'data_repository.dart';
 
+import 'package:flutter/gestures.dart';
+import 'package:url_launcher/url_launcher.dart';
+
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
 
@@ -30,11 +33,68 @@ class _LoginPageState extends State<LoginPage> {
   bool _isLoadingUnits = false;
   List<Map<String, dynamic>> _availableUnits = [];
   int? _selectedUnitId;
+  bool _isAcceptedTerms = false;
 
   @override
   void initState() {
     super.initState();
     _fetchUnits();
+  }
+
+  Future<void> _launchPolicy() async {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Row(
+          children: [
+            Icon(Icons.gavel_rounded, color: Colors.indigo),
+            SizedBox(width: 10),
+            Text('Tratamiento de Datos', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'En cumplimiento de la Ley 1581 de 2012 (Habeas Data) en Colombia, le informamos que al registrarse:',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                '1. Sus datos personales (nombre, correo, teléfono y ubicación) serán utilizados exclusivamente para la gestión administrativa de la copropiedad.\n\n'
+                '2. La información se almacenará de forma segura en nuestros servidores y solo será accesible por personal autorizado.\n\n'
+                '3. Usted tiene derecho a actualizar, rectificar o solicitar la eliminación de sus datos en cualquier momento a través del perfil de usuario.\n\n'
+                '4. Al continuar, usted autoriza de manera voluntaria, previa e informada el tratamiento de sus datos personales.',
+                textAlign: TextAlign.justify,
+                style: TextStyle(fontSize: 14),
+              ),
+              const SizedBox(height: 16),
+              Center(
+                child: TextButton.icon(
+                  onPressed: () async {
+                    final Uri url = Uri.parse('https://www.sic.gov.co/sobre-la-proteccion-de-datos-personales');
+                    if (!await launchUrl(url)) {
+                      _showMsg('No se pudo abrir el enlace');
+                    }
+                  },
+                  icon: const Icon(Icons.open_in_new_rounded, size: 18),
+                  label: const Text('Ver regulación completa (SIC)', style: TextStyle(fontSize: 12)),
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('ENTENDIDO', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.indigo)),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _fetchUnits() async {
@@ -127,6 +187,11 @@ class _LoginPageState extends State<LoginPage> {
       return;
     }
 
+    if (!_isAcceptedTerms) {
+      _showMsg('Debes aceptar la política de tratamiento de datos personales');
+      return;
+    }
+
     // Preparar datos para la API (necesita 'name') y local
     Map<String, dynamic> userData = {
       'name': '$firstName $lastName',
@@ -142,10 +207,53 @@ class _LoginPageState extends State<LoginPage> {
 
     if (success) {
       _showMsg('Usuario registrado con éxito en el servidor');
-      setState(() => _isRegisterMode = false);
+      setState(() {
+        _isRegisterMode = false;
+        _isAcceptedTerms = false; // Reset for next time
+      });
     } else {
       _showMsg('Error al registrar usuario. Posiblemente el correo ya existe o falla de conexión.');
     }
+  }
+
+  Widget _buildTermsCheckbox() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        children: [
+          SizedBox(
+            height: 24,
+            width: 24,
+            child: Checkbox(
+              value: _isAcceptedTerms,
+              activeColor: Colors.indigo,
+              onChanged: (val) => setState(() => _isAcceptedTerms = val!),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: RichText(
+              text: TextSpan(
+                style: TextStyle(color: Colors.blueGrey[600], fontSize: 13),
+                children: [
+                  const TextSpan(text: 'Acepto la '),
+                  TextSpan(
+                    text: 'Política de Tratamiento de Datos Personales',
+                    style: const TextStyle(
+                      color: Colors.indigo,
+                      fontWeight: FontWeight.bold,
+                      decoration: TextDecoration.underline,
+                    ),
+                    recognizer: TapGestureRecognizer()..onTap = _launchPolicy,
+                  ),
+                  const TextSpan(text: ' según la regulación de Colombia.'),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   void _showMsg(String msg) {
@@ -344,6 +452,8 @@ class _LoginPageState extends State<LoginPage> {
                       Expanded(child: _buildTextField(_apartmentController, 'Apto', Icons.door_front_door_outlined)),
                     ],
                   ),
+                  const SizedBox(height: 16),
+                  _buildTermsCheckbox(),
                 ],
                 
                 const SizedBox(height: 32),
