@@ -310,6 +310,90 @@ class ApiService {
     }
   }
 
+  // --- Permisos y Sincronización ---
+
+  Future<Map<String, dynamic>?> getMyProfile() async {
+    try {
+      final headers = await _getHeaders();
+      final response = await http.post(
+        Uri.parse('$baseUrl/auth/me'),
+        headers: headers,
+      );
+      return response.statusCode == 200 ? jsonDecode(response.body) : null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  Future<bool> toggleUserHistory(int userId, bool enabled) async {
+    try {
+      final headers = await _getHeaders();
+      final response = await http.post(
+        Uri.parse('$baseUrl/users/$userId/toggle-history'),
+        headers: headers,
+        body: jsonEncode({'enabled': enabled}),
+      );
+      return response.statusCode == 200;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  Future<bool> toggleUnitHistory(int unitId, bool enabled) async {
+    try {
+      final headers = await _getHeaders();
+      final response = await http.post(
+        Uri.parse('$baseUrl/units/$unitId/toggle-history'),
+        headers: headers,
+        body: jsonEncode({'enabled': enabled}),
+      );
+      return response.statusCode == 200;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  Future<List<dynamic>> getAllUsers() async {
+    try {
+      final headers = await _getHeaders();
+      // Asumiremos que crearemos este endpoint o usaremos uno existente filtrado
+      final response = await http.get(
+        Uri.parse('$baseUrl/admin/users'),
+        headers: headers,
+      );
+      return response.statusCode == 200 ? jsonDecode(response.body) : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  Future<List<dynamic>> getAllUnits() async {
+    try {
+      final headers = await _getHeaders();
+      final response = await http.get(
+        Uri.parse('$baseUrl/units'),
+        headers: headers,
+      );
+      return response.statusCode == 200 ? jsonDecode(response.body) : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  Future<bool> toggleUserAdmin(int userId, bool isAdmin) async {
+    try {
+      final headers = await _getHeaders();
+      final response = await http.post(
+        Uri.parse('$baseUrl/users/$userId/toggle-admin'),
+        headers: headers,
+        body: jsonEncode({'is_admin': isAdmin}),
+      );
+      return response.statusCode == 200;
+    } catch (e) {
+      return false;
+    }
+  }
+
   // --- Historial de Consultas ---
 
   Future<List<dynamic>> getMyConsultations(int userId) async {

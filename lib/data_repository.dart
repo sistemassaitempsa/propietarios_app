@@ -25,9 +25,18 @@ class DataRepository {
       if (apiResponse.containsKey('user')) {
         final userData = apiResponse['user'];
         
-        // Guardar user_id en SharedPreferences para consultas futuras
+        // Guardar user_id y permisos en SharedPreferences para consultas futuras
         if (userData.containsKey('id')) {
           await prefs.setInt('user_id', userData['id']);
+          await prefs.setBool('is_admin', userData['is_admin'] ?? false);
+          
+          // El permiso de historial depende del usuario O de su unidad
+          bool userHistory = userData['history_enabled'] ?? false;
+          bool unitHistory = false;
+          if (userData.containsKey('unit') && userData['unit'] != null) {
+            unitHistory = userData['unit']['history_enabled'] ?? false;
+          }
+          await prefs.setBool('history_enabled', userHistory || unitHistory);
         }
 
         final localData = _filterLocalData(userData);
