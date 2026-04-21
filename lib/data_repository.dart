@@ -1,3 +1,4 @@
+import 'package:shared_preferences/shared_preferences.dart';
 import 'api_service.dart';
 import 'database_helper.dart';
 
@@ -12,6 +13,8 @@ class DataRepository {
     final apiResponse = await _apiService.loginUser(email, password);
     
     if (apiResponse != null) {
+      final prefs = await SharedPreferences.getInstance();
+      
       // 2. Si la API devuelve un token, guardarlo automáticamente
       if (apiResponse.containsKey('access_token')) {
         await _apiService.saveToken(apiResponse['access_token']);
@@ -21,6 +24,12 @@ class DataRepository {
       // El objeto user ahora viene dentro de la respuesta
       if (apiResponse.containsKey('user')) {
         final userData = apiResponse['user'];
+        
+        // Guardar user_id en SharedPreferences para consultas futuras
+        if (userData.containsKey('id')) {
+          await prefs.setInt('user_id', userData['id']);
+        }
+
         final localData = _filterLocalData(userData);
         
         final localUser = await _dbHelper.getUser(email);
@@ -54,8 +63,16 @@ class DataRepository {
     final apiResult = await _apiService.registerUser({'email': email, 'password': password, ...apiData});
     
     if (apiResult != null && apiResult.containsKey('user')) {
+      final prefs = await SharedPreferences.getInstance();
+      
       // 2. Guardar en local con el ID de la API
       final remoteUserData = apiResult['user'];
+      
+      // Guardar user_id en SharedPreferences
+      if (remoteUserData.containsKey('id')) {
+        await prefs.setInt('user_id', remoteUserData['id']);
+      }
+
       final localData = _filterLocalData(remoteUserData);
       
       // Intentar actualizar si ya existe o registrar nuevo
@@ -181,8 +198,11 @@ class DataRepository {
   }
 
   Future<Map<String, dynamic>?> searchByPlate(String plate) async {
+    final prefs = await SharedPreferences.getInstance();
+    final userId = prefs.getInt('user_id');
+
     // 1. Intentar buscar en la API
-    final apiResult = await _apiService.searchByPlate(plate);
+    final apiResult = await _apiService.searchByPlate(plate, userId: userId);
     if (apiResult != null) return apiResult;
 
     // 2. Si falla o no encuentra, buscar en local (opcional, dependiendo de si queremos ver nuestros propios vehículos)
@@ -204,5 +224,17 @@ class DataRepository {
   Future<void> logout() async {
     await _apiService.clearToken();
     // Los datos locales se mantienen según requerimiento.
+  }
+
+  // --- Historial de Consultas ---
+
+  Future<List<dynamic>> getMyConsultations(int userId) async {
+    // Estas consultas siempre las traemos de la API para estar actualizados
+    return await _apiService.getMyConsultations(userId);
+  }
+
+  Future<List<dynamic>> getOthersConsultations(int userId) async {
+    // Estas consultas siempre las traemos de la API
+    return await _apiService.getOthersConsultations(userId);
   }
 }

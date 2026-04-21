@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'profile_page.dart';
 import 'search_page.dart';
 import 'residents_page.dart';
+import 'history_page.dart';
 
 class HomePage extends StatefulWidget {
   final String userEmail;
@@ -22,6 +23,7 @@ class _HomePageState extends State<HomePage> {
       ProfilePage(userEmail: widget.userEmail),
       const SearchPage(),
       const ResidentsPage(),
+      const HistoryPage(),
     ];
   }
 
@@ -34,10 +36,7 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: IndexedStack(
-        index: _selectedIndex,
-        children: _pages,
-      ),
+      body: _pages[_selectedIndex],
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
         onTap: _onItemTapped,
@@ -50,11 +49,15 @@ class _HomePageState extends State<HomePage> {
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.search),
-            label: 'Consulta Placa',
+            label: 'Consulta',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.groups_rounded),
             label: 'Mi Apto',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.history),
+            label: 'Historial',
           ),
         ],
       ),

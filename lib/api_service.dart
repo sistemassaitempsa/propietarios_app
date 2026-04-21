@@ -293,16 +293,48 @@ class ApiService {
     }
   }
 
-  Future<Map<String, dynamic>?> searchByPlate(String plate) async {
+  Future<Map<String, dynamic>?> searchByPlate(String plate, {int? userId}) async {
     try {
       final headers = await _getHeaders();
+      String url = '$baseUrl/search/plate/$plate';
+      if (userId != null) {
+        url += '?user_id=$userId';
+      }
       final response = await http.get(
-        Uri.parse('$baseUrl/search/plate/$plate'),
+        Uri.parse(url),
         headers: headers,
       );
       return response.statusCode == 200 ? jsonDecode(response.body) : null;
     } catch (e) {
       return null;
+    }
+  }
+
+  // --- Historial de Consultas ---
+
+  Future<List<dynamic>> getMyConsultations(int userId) async {
+    try {
+      final headers = await _getHeaders();
+      final response = await http.get(
+        Uri.parse('$baseUrl/consultations/my?user_id=$userId'),
+        headers: headers,
+      );
+      return response.statusCode == 200 ? jsonDecode(response.body) : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  Future<List<dynamic>> getOthersConsultations(int userId) async {
+    try {
+      final headers = await _getHeaders();
+      final response = await http.get(
+        Uri.parse('$baseUrl/consultations/others?user_id=$userId'),
+        headers: headers,
+      );
+      return response.statusCode == 200 ? jsonDecode(response.body) : [];
+    } catch (e) {
+      return [];
     }
   }
 }
