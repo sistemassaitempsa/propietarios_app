@@ -17,6 +17,8 @@ class _AdminPageState extends State<AdminPage> with SingleTickerProviderStateMix
   bool _isLoadingUsers = true;
   bool _isLoadingUnits = true;
   final TextEditingController _unitSearchController = TextEditingController();
+  final TextEditingController _userSearchController = TextEditingController();
+  String _searchCriteria = 'Nombre'; // 'Nombre', 'Unidad', 'Placa'
 
   @override
   void initState() {
@@ -28,6 +30,7 @@ class _AdminPageState extends State<AdminPage> with SingleTickerProviderStateMix
       }
     });
     _unitSearchController.addListener(_onUnitSearchChanged);
+    _userSearchController.addListener(_onUserSearchChanged);
     _fetchUsers();
     _fetchUnits();
   }
@@ -36,6 +39,8 @@ class _AdminPageState extends State<AdminPage> with SingleTickerProviderStateMix
   void dispose() {
     _unitSearchController.removeListener(_onUnitSearchChanged);
     _unitSearchController.dispose();
+    _userSearchController.removeListener(_onUserSearchChanged);
+    _userSearchController.dispose();
     _tabController.dispose();
     super.dispose();
   }
@@ -44,9 +49,24 @@ class _AdminPageState extends State<AdminPage> with SingleTickerProviderStateMix
     _fetchUnits(name: _unitSearchController.text);
   }
 
-  Future<void> _fetchUsers() async {
-    setState(() => _isLoadingUsers = true);
-    final users = await _apiService.getAllUsers();
+  void _onUserSearchChanged() {
+    String text = _userSearchController.text;
+    if (_searchCriteria == 'Nombre') {
+      _fetchUsers(name: text);
+    } else if (_searchCriteria == 'Unidad') {
+      _fetchUsers(unit: text);
+    } else if (_searchCriteria == 'Placa') {
+      _fetchUsers(plate: text);
+    }
+  }
+
+  Future<void> _fetchUsers({String? name, String? unit, String? plate}) async {
+    // Si no hay búsqueda, mostramos el indicador de carga
+    if ((name == null || name.isEmpty) && (unit == null || unit.isEmpty) && (plate == null || plate.isEmpty)) {
+      setState(() => _isLoadingUsers = true);
+    }
+    
+    final users = await _apiService.getAllUsers(name: name, unit: unit, plate: plate);
     setState(() {
       _users = users;
       _isLoadingUsers = false;
@@ -256,35 +276,149 @@ class _AdminPageState extends State<AdminPage> with SingleTickerProviderStateMix
   }
 
   Widget _buildUsersList() {
-    if (_isLoadingUsers) return const Center(child: CircularProgressIndicator());
-    if (_users.isEmpty) return const Center(child: Text('No hay usuarios registrados'));
-
-    return ListView.builder(
-      itemCount: _users.length,
-      itemBuilder: (context, index) {
-        final user = _users[index];
-        final bool isHistoryEnabled = user['history_enabled'] == true || user['history_enabled'] == 1;
-        
-        return Card(
-          margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-          child: ListTile(
-            leading: const CircleAvatar(child: Icon(Icons.person)),
-            title: Text('${user['firstName']} ${user['lastName']}'),
-            subtitle: Text('${user['email']}\nUnidad: ${user['unit']?['name'] ?? 'N/A'} - Apt: ${user['apartment']}'),
-            isThreeLine: true,
-            trailing: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text('Historial', style: TextStyle(fontSize: 10)),
-                Switch(
-                  value: isHistoryEnabled,
-                  onChanged: (value) => _toggleUserHistory(user['id'], isHistoryEnabled),
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Row(
+            children: [
+              Expanded(
+                flex: 2,
+                child: DropdownButtonFormField<String>(
+                  value: _searchCriteria,
+                  decoration: InputDecoration(
+                    labelText: 'Filtrar por',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 10),
+                  ),
+                  items: ['Nombre', 'Unidad', 'Placa']
+                      .map((label) => DropdownMenuItem(
+                            value: label,
+                            child: Text(label, style: const TextStyle(fontSize: 14)),
+                          ))
+                      .toList(),
+                  onChanged: (value) {
+                    setState(() {
+                      _searchCriteria = value!;
+                      _userSearchController.clear();
+                      _fetchUsers();
+                    });
+                  },
                 ),
-              ],
-            ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                flex: 3,
+                child: TextField(
+                  controller: _userSearchController,
+                  decoration: InputDecoration(
+                    hintText: 'Buscar...',
+                    prefixIcon: const Icon(Icons.search),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                    suffixIcon: _userSearchController.text.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.clear),
+                            onPressed: () {
+                              _userSearchController.clear();
+                              _fetchUsers();
+                            },
+                          )
+                        : null,
+                  ),
+                ),
+              ),
+            ],
           ),
-        );
-      },
+        ),
+        Expanded(
+          child: _isLoadingUsers && _users.isEmpty
+              ? const Center(child: CircularProgressIndicator())
+              : _users.isEmpty
+                  ? const Center(child: Text('No hay usuarios registrados'))
+                  : ListView.builder(
+                      itemCount: _users.length,
+                      itemBuilder: (context, index) {
+                        final user = _users[index];
+                        final bool isHistoryEnabled = user['history_enabled'] == true || user['history_enabled'] == 1;
+                        final bool isActive = user['active'] == true || user['active'] == 1;
+                        final List<dynamic> vehicles = user['vehicles'] ?? [];
+                        final List<dynamic> contacts = user['emergencyContacts'] ?? [];
+
+                        return Card(
+                          margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                          child: ExpansionTile(
+                            leading: Stack(
+                              children: [
+                                const CircleAvatar(child: Icon(Icons.person)),
+                                Positioned(
+                                  right: 0,
+                                  bottom: 0,
+                                  child: Container(
+                                    width: 12,
+                                    height: 12,
+                                    decoration: BoxDecoration(
+                                      color: isActive ? Colors.green : Colors.red,
+                                      shape: BoxShape.circle,
+                                      border: Border.all(color: Colors.white, width: 2),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            title: Text('${user['firstName']} ${user['lastName']}'),
+                            subtitle: Text('Unidad: ${user['unit']?['name'] ?? 'N/A'} - Apt: ${user['apartment']}'),
+                            trailing: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Text('Historial', style: TextStyle(fontSize: 10)),
+                                SizedBox(
+                                  height: 30,
+                                  child: Switch(
+                                    value: isHistoryEnabled,
+                                    onChanged: (value) => _toggleUserHistory(user['id'], isHistoryEnabled),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            children: [
+                              const Divider(),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Text('Estado: ${isActive ? 'Activo' : 'Inactivo'}', 
+                                          style: TextStyle(fontWeight: FontWeight.bold, color: isActive ? Colors.green : Colors.red)),
+                                        Text('Email: ${user['email']}', style: const TextStyle(fontSize: 12)),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 10),
+                                    const Text('Vehículos:', style: TextStyle(fontWeight: FontWeight.bold)),
+                                    if (vehicles.isEmpty)
+                                      const Text('No tiene vehículos registrados', style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic))
+                                    else
+                                      ...vehicles.map((v) => Text('• ${v['brand']} ${v['model']} - Placa: ${v['plate']}', style: const TextStyle(fontSize: 12))),
+                                    
+                                    const SizedBox(height: 10),
+                                    const Text('Contactos de Emergencia:', style: TextStyle(fontWeight: FontWeight.bold)),
+                                    if (contacts.isEmpty)
+                                      const Text('No tiene contactos registrados', style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic))
+                                    else
+                                      ...contacts.map((c) => Text('• ${c['name']} (${c['relationship']}): ${c['phone']}', style: const TextStyle(fontSize: 12))),
+                                    const SizedBox(height: 8),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+        ),
+      ],
     );
   }
 

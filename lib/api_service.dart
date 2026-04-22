@@ -399,12 +399,16 @@ class ApiService {
     }
   }
 
-  Future<List<dynamic>> getAllUsers() async {
+  Future<List<dynamic>> getAllUsers({String? name, String? unit, String? plate}) async {
     try {
       final headers = await _getHeaders();
-      // Asumiremos que crearemos este endpoint o usaremos uno existente filtrado
+      String url = '$baseUrl/admin/users?';
+      if (name != null && name.isNotEmpty) url += 'name=${Uri.encodeComponent(name)}&';
+      if (unit != null && unit.isNotEmpty) url += 'unit=${Uri.encodeComponent(unit)}&';
+      if (plate != null && plate.isNotEmpty) url += 'plate=${Uri.encodeComponent(plate)}&';
+
       final response = await http.get(
-        Uri.parse('$baseUrl/admin/users'),
+        Uri.parse(url),
         headers: headers,
       );
       return response.statusCode == 200 ? jsonDecode(response.body) : [];
