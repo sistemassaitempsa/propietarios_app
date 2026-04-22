@@ -33,14 +33,34 @@ static const String baseUrl = "http://10.0.2.2:8000/api";
 | Perfil | GET | `/users/{id}` |
 | Actualizar | PUT | `/users/{id}` |
 | Subir Foto | POST | `/users/{id}/upload-image` |
-| Unidades | GET | `/units` |
+| Unidades (Lista) | GET | `/units` |
+| Unidades (Crear) | POST | `/units` |
+| Unidades (Editar) | PUT | `/units/{id}` |
+| Unidades (Borrar) | DELETE | `/units/{id}` |
+| Unidades (Estado) | POST | `/units/{id}/toggle-active` |
+| Unidades (Historial) | POST | `/units/{id}/toggle-history` |
+| Usuarios (Admin) | GET | `/admin/users` |
+| Usuarios (Estado) | POST | `/users/{id}/toggle-active` |
+| Usuarios (Historial) | POST | `/users/{id}/toggle-history` |
 | Contactos | GET | `/emergency-contacts?user_id={id}` |
 | Vehículos | GET | `/vehicles?user_id={id}` |
 | Buscar Placa| GET | `/search/plate/{plate}` |
 
 ---
 
-## 4. Gestión de Archivos (Fotos de Perfil)
+## 4. Módulo de Administración
+
+### 4.1. Gestión de Unidades
+- **Búsqueda:** Filtrado por nombre mediante el parámetro `?name=` en la petición GET.
+- **Validaciones:** Solo se permite eliminar unidades que no tengan usuarios asociados (`users_count == 0`).
+- **Estado:** Las unidades inhabilitadas restringen el acceso a sus residentes.
+
+### 4.2. Gestión de Usuarios
+- **Búsqueda Avanzada:** Soporta filtros por `name` (nombres/apellidos), `unit` (nombre del conjunto) y `plate` (placa de vehículo).
+- **Detalles:** La API retorna relaciones completas (`vehicles` y `emergencyContacts`) para visualización detallada.
+- **Control:** El administrador puede inhabilitar cuentas individualmente.
+
+## 5. Gestión de Archivos (Fotos de Perfil)
 
 Cuando el usuario sube una foto:
 1.  Se captura con `image_picker`.
