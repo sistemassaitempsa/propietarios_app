@@ -22,6 +22,11 @@ class _AdminPageState extends State<AdminPage> with SingleTickerProviderStateMix
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    _tabController.addListener(() {
+      if (!_tabController.indexIsChanging) {
+        setState(() {});
+      }
+    });
     _unitSearchController.addListener(_onUnitSearchChanged);
     _fetchUsers();
     _fetchUnits();
@@ -169,6 +174,55 @@ class _AdminPageState extends State<AdminPage> with SingleTickerProviderStateMix
     );
   }
 
+  void _showEditUnitDialog(dynamic unit) {
+    final nameController = TextEditingController(text: unit['name']);
+    final descController = TextEditingController(text: unit['description'] ?? '');
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Editar Unidad'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: nameController,
+              decoration: const InputDecoration(labelText: 'Nombre de la Unidad'),
+            ),
+            TextField(
+              controller: descController,
+              decoration: const InputDecoration(labelText: 'Descripción'),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              if (nameController.text.isNotEmpty) {
+                final result = await _apiService.updateUnit(unit['id'], {
+                  'name': nameController.text,
+                  'description': descController.text,
+                });
+                if (result != null) {
+                  Navigator.pop(context);
+                  _fetchUnits();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Unidad actualizada exitosamente')),
+                  );
+                }
+              }
+            },
+            child: const Text('Guardar'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -235,73 +289,112 @@ class _AdminPageState extends State<AdminPage> with SingleTickerProviderStateMix
   }
 
   Widget _buildUnitsList() {
-    if (_isLoadingUnits) return const Center(child: CircularProgressIndicator());
-    if (_units.isEmpty) return const Center(child: Text('No hay unidades registradas'));
-
-    return ListView.builder(
-      itemCount: _units.length,
-      itemBuilder: (context, index) {
-        final unit = _units[index];
-        final bool isHistoryEnabled = unit['history_enabled'] == true || unit['history_enabled'] == 1;
-        final bool isActive = unit['active'] == true || unit['active'] == 1;
-        final int userCount = unit['users_count'] ?? 0;
-
-        return Card(
-          margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8.0),
-            child: Column(
-              children: [
-                ListTile(
-                  leading: Icon(Icons.business, color: isActive ? Colors.indigo : Colors.grey),
-                  title: Text(unit['name'], style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: isActive ? Colors.black : Colors.grey,
-                  )),
-                  subtitle: Text('${unit['description'] ?? 'Sin descripción'}\nPropietarios: $userCount'),
-                  trailing: IconButton(
-                    icon: const Icon(Icons.delete_outline, color: Colors.red),
-                    onPressed: userCount == 0 
-                      ? () => _deleteUnit(unit['id'], unit['name'])
-                      : null, // Deshabilitado si tiene propietarios
-                    tooltip: userCount == 0 ? 'Eliminar' : 'No se puede eliminar (tiene propietarios)',
-                  ),
-                ),
-                const Divider(height: 1),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Row(
-                        children: [
-                          const Text('Estado: ', style: TextStyle(fontSize: 12)),
-                          Text(isActive ? 'Activa' : 'Inactiva', 
-                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: isActive ? Colors.green : Colors.red)),
-                          Switch(
-                            value: isActive,
-                            activeColor: Colors.green,
-                            onChanged: (value) => _toggleUnitActive(unit['id'], isActive),
-                          ),
-                        ],
-                      ),
-                      Row(
-                        children: [
-                          const Text('Historial: ', style: TextStyle(fontSize: 12)),
-                          Switch(
-                            value: isHistoryEnabled,
-                            onChanged: (value) => _toggleUnitHistory(unit['id'], isHistoryEnabled),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: TextField(
+            controller: _unitSearchController,
+            decoration: InputDecoration(
+              hintText: 'Buscar unidad...',
+              prefixIcon: const Icon(Icons.search),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+              suffixIcon: _unitSearchController.text.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Icons.clear),
+                      onPressed: () {
+                        _unitSearchController.clear();
+                        _fetchUnits();
+                      },
+                    )
+                  : null,
             ),
           ),
-        );
-      },
+        ),
+        Expanded(
+          child: _isLoadingUnits && _units.isEmpty
+              ? const Center(child: CircularProgressIndicator())
+              : _units.isEmpty
+                  ? const Center(child: Text('No hay unidades registradas'))
+                  : ListView.builder(
+                      itemCount: _units.length,
+                      itemBuilder: (context, index) {
+                        final unit = _units[index];
+                        final bool isHistoryEnabled = unit['history_enabled'] == true || unit['history_enabled'] == 1;
+                        final bool isActive = unit['active'] == true || unit['active'] == 1;
+                        final int userCount = unit['users_count'] ?? 0;
+
+                        return Card(
+                          margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 8.0),
+                            child: Column(
+                              children: [
+                                ListTile(
+                                  leading: Icon(Icons.business, color: isActive ? Colors.indigo : Colors.grey),
+                                  title: Text(unit['name'], style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: isActive ? Colors.black : Colors.grey,
+                                  )),
+                                  subtitle: Text('${unit['description'] ?? 'Sin descripción'}\nPropietarios: $userCount'),
+                                  trailing: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      IconButton(
+                                        icon: const Icon(Icons.edit, color: Colors.blue),
+                                        onPressed: () => _showEditUnitDialog(unit),
+                                        tooltip: 'Editar',
+                                      ),
+                                      IconButton(
+                                        icon: const Icon(Icons.delete_outline, color: Colors.red),
+                                        onPressed: userCount == 0 
+                                          ? () => _deleteUnit(unit['id'], unit['name'])
+                                          : null, // Deshabilitado si tiene propietarios
+                                        tooltip: userCount == 0 ? 'Eliminar' : 'No se puede eliminar (tiene propietarios)',
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const Divider(height: 1),
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          const Text('Estado: ', style: TextStyle(fontSize: 12)),
+                                          Text(isActive ? 'Activa' : 'Inactiva', 
+                                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: isActive ? Colors.green : Colors.red)),
+                                          Switch(
+                                            value: isActive,
+                                            activeColor: Colors.green,
+                                            onChanged: (value) => _toggleUnitActive(unit['id'], isActive),
+                                          ),
+                                        ],
+                                      ),
+                                      Row(
+                                        children: [
+                                          const Text('Historial: ', style: TextStyle(fontSize: 12)),
+                                          Switch(
+                                            value: isHistoryEnabled,
+                                            onChanged: (value) => _toggleUnitHistory(unit['id'], isHistoryEnabled),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+        ),
+      ],
     );
   }
 }
