@@ -181,6 +181,52 @@ class ApiService {
     }
   }
 
+  Future<Map<String, dynamic>?> addUnit(Map<String, dynamic> unitData) async {
+    try {
+      final headers = await _getHeaders();
+      final response = await http.post(
+        Uri.parse('$baseUrl/units'),
+        headers: headers,
+        body: jsonEncode(unitData),
+      );
+      return response.statusCode == 201 ? jsonDecode(response.body) : null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  Future<bool> toggleUnitActive(int unitId, bool active) async {
+    try {
+      final headers = await _getHeaders();
+      final response = await http.post(
+        Uri.parse('$baseUrl/units/$unitId/toggle-active'),
+        headers: headers,
+        body: jsonEncode({'active': active}),
+      );
+      return response.statusCode == 200;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  Future<String?> deleteUnit(int unitId) async {
+    try {
+      final headers = await _getHeaders();
+      final response = await http.delete(
+        Uri.parse('$baseUrl/units/$unitId'),
+        headers: headers,
+      );
+      final data = jsonDecode(response.body);
+      if (response.statusCode == 200) {
+        return null; // Éxito
+      } else {
+        return data['message'] ?? 'Error al eliminar unidad';
+      }
+    } catch (e) {
+      return 'Error de conexión';
+    }
+  }
+
   // --- Contactos de Emergencia ---
 
   Future<List<dynamic>> getEmergencyContacts(int userId) async {
@@ -367,16 +413,34 @@ class ApiService {
     }
   }
 
-  Future<List<dynamic>> getAllUnits() async {
+  Future<List<dynamic>> getAllUnits({String? name}) async {
     try {
       final headers = await _getHeaders();
+      String url = '$baseUrl/units';
+      if (name != null && name.isNotEmpty) {
+        url += '?name=${Uri.encodeComponent(name)}';
+      }
       final response = await http.get(
-        Uri.parse('$baseUrl/units'),
+        Uri.parse(url),
         headers: headers,
       );
       return response.statusCode == 200 ? jsonDecode(response.body) : [];
     } catch (e) {
       return [];
+    }
+  }
+
+  Future<Map<String, dynamic>?> updateUnit(int id, Map<String, dynamic> data) async {
+    try {
+      final headers = await _getHeaders();
+      final response = await http.put(
+        Uri.parse('$baseUrl/units/$id'),
+        headers: headers,
+        body: jsonEncode(data),
+      );
+      return response.statusCode == 200 ? jsonDecode(response.body) : null;
+    } catch (e) {
+      return null;
     }
   }
 

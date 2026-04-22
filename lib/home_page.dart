@@ -4,6 +4,7 @@ import 'profile_page.dart';
 import 'search_page.dart';
 import 'residents_page.dart';
 import 'history_page.dart';
+import 'admin_page.dart';
 
 class HomePage extends StatefulWidget {
   final String userEmail;
@@ -52,6 +53,10 @@ class _HomePageState extends State<HomePage> {
     if (_historyEnabled || _isAdmin) {
       pages.add(const HistoryPage());
     }
+
+    if (_isAdmin) {
+      pages.add(const AdminPage());
+    }
     
     return pages;
   }
@@ -76,6 +81,13 @@ class _HomePageState extends State<HomePage> {
       items.add(const BottomNavigationBarItem(
         icon: Icon(Icons.history),
         label: 'Historial',
+      ));
+    }
+
+    if (_isAdmin) {
+      items.add(const BottomNavigationBarItem(
+        icon: Icon(Icons.admin_panel_settings),
+        label: 'Admin',
       ));
     }
 
