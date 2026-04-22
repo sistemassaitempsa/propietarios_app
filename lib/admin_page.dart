@@ -96,6 +96,16 @@ class _AdminPageState extends State<AdminPage> with SingleTickerProviderStateMix
     }
   }
 
+  Future<void> _toggleUserActive(int userId, bool currentStatus) async {
+    final success = await _apiService.toggleUserActive(userId, !currentStatus);
+    if (success) {
+      _fetchUsers();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Usuario ${!currentStatus ? 'habilitado' : 'inhabilitado'} exitosamente')),
+      );
+    }
+  }
+
   Future<void> _toggleUnitHistory(int unitId, bool currentStatus) async {
     final success = await _apiService.toggleUnitHistory(unitId, !currentStatus);
     if (success) {
@@ -367,19 +377,6 @@ class _AdminPageState extends State<AdminPage> with SingleTickerProviderStateMix
                             ),
                             title: Text('${user['firstName']} ${user['lastName']}'),
                             subtitle: Text('Unidad: ${user['unit']?['name'] ?? 'N/A'} - Apt: ${user['apartment']}'),
-                            trailing: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Text('Historial', style: TextStyle(fontSize: 10)),
-                                SizedBox(
-                                  height: 30,
-                                  child: Switch(
-                                    value: isHistoryEnabled,
-                                    onChanged: (value) => _toggleUserHistory(user['id'], isHistoryEnabled),
-                                  ),
-                                ),
-                              ],
-                            ),
                             children: [
                               const Divider(),
                               Padding(
@@ -387,27 +384,73 @@ class _AdminPageState extends State<AdminPage> with SingleTickerProviderStateMix
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    Wrap(
+                                      alignment: WrapAlignment.spaceBetween,
+                                      crossAxisAlignment: WrapCrossAlignment.center,
+                                      spacing: 20,
+                                      runSpacing: 10,
                                       children: [
-                                        Text('Estado: ${isActive ? 'Activo' : 'Inactivo'}', 
-                                          style: TextStyle(fontWeight: FontWeight.bold, color: isActive ? Colors.green : Colors.red)),
-                                        Text('Email: ${user['email']}', style: const TextStyle(fontSize: 12)),
+                                        // Switch de Cuenta Activa
+                                        Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Text('Cuenta: ${isActive ? 'Activa' : 'Inactiva'}', 
+                                              style: TextStyle(fontWeight: FontWeight.bold, color: isActive ? Colors.green : Colors.red, fontSize: 13)),
+                                            const SizedBox(width: 4),
+                                            Transform.scale(
+                                              scale: 0.8,
+                                              child: Switch(
+                                                value: isActive,
+                                                activeColor: Colors.green,
+                                                onChanged: (value) => _toggleUserActive(user['id'], isActive),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        // Switch de Historial
+                                        Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            const Text('Historial: ', 
+                                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                                            Transform.scale(
+                                              scale: 0.8,
+                                              child: Switch(
+                                                value: isHistoryEnabled,
+                                                onChanged: (value) => _toggleUserHistory(user['id'], isHistoryEnabled),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
                                       ],
                                     ),
-                                    const SizedBox(height: 10),
+                                    const SizedBox(height: 8),
+                                    Text('Email: ${user['email']}', style: const TextStyle(fontSize: 13, color: Colors.blueGrey)),
+                                    const SizedBox(height: 12),
                                     const Text('Vehículos:', style: TextStyle(fontWeight: FontWeight.bold)),
                                     if (vehicles.isEmpty)
-                                      const Text('No tiene vehículos registrados', style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic))
+                                      const Padding(
+                                        padding: EdgeInsets.only(left: 8.0, top: 4.0),
+                                        child: Text('No tiene vehículos registrados', style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic)),
+                                      )
                                     else
-                                      ...vehicles.map((v) => Text('• ${v['brand']} ${v['model']} - Placa: ${v['plate']}', style: const TextStyle(fontSize: 12))),
+                                      ...vehicles.map((v) => Padding(
+                                        padding: const EdgeInsets.only(left: 8.0, top: 2.0),
+                                        child: Text('• ${v['brand']} ${v['model']} - Placa: ${v['plate']}', style: const TextStyle(fontSize: 12)),
+                                      )),
                                     
-                                    const SizedBox(height: 10),
+                                    const SizedBox(height: 12),
                                     const Text('Contactos de Emergencia:', style: TextStyle(fontWeight: FontWeight.bold)),
                                     if (contacts.isEmpty)
-                                      const Text('No tiene contactos registrados', style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic))
+                                      const Padding(
+                                        padding: EdgeInsets.only(left: 8.0, top: 4.0),
+                                        child: Text('No tiene contactos registrados', style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic)),
+                                      )
                                     else
-                                      ...contacts.map((c) => Text('• ${c['name']} (${c['relationship']}): ${c['phone']}', style: const TextStyle(fontSize: 12))),
+                                      ...contacts.map((c) => Padding(
+                                        padding: const EdgeInsets.only(left: 8.0, top: 2.0),
+                                        child: Text('• ${c['name']} (${c['relationship']}): ${c['phone']}', style: const TextStyle(fontSize: 12)),
+                                      )),
                                     const SizedBox(height: 8),
                                   ],
                                 ),

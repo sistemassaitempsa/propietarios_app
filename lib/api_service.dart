@@ -385,6 +385,20 @@ class ApiService {
     }
   }
 
+  Future<bool> toggleUserActive(int userId, bool active) async {
+    try {
+      final headers = await _getHeaders();
+      final response = await http.post(
+        Uri.parse('$baseUrl/users/$userId/toggle-active'),
+        headers: headers,
+        body: jsonEncode({'active': active}),
+      );
+      return response.statusCode == 200;
+    } catch (e) {
+      return false;
+    }
+  }
+
   Future<bool> toggleUnitHistory(int unitId, bool enabled) async {
     try {
       final headers = await _getHeaders();
