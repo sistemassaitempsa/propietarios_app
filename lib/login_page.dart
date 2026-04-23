@@ -42,10 +42,59 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   Future<void> _launchPolicy() async {
-    final Uri url = Uri.parse('https://www.sic.gov.co/sobre-la-proteccion-de-datos-personales');
-    if (!await launchUrl(url)) {
-      _showMsg('No se pudo abrir el enlace');
-    }
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Row(
+          children: [
+            Icon(Icons.gavel_rounded, color: Colors.indigo),
+            SizedBox(width: 10),
+            Text('Tratamiento de Datos', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'En cumplimiento de la Ley 1581 de 2012 (Habeas Data) en Colombia, le informamos que al registrarse:',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                '1. Sus datos personales (nombre, correo, teléfono y ubicación) serán utilizados exclusivamente para la gestión administrativa de la copropiedad.\n\n'
+                '2. La información se almacenará de forma segura en nuestros servidores y solo será accesible por personal autorizado.\n\n'
+                '3. Usted tiene derecho a actualizar, rectificar o solicitar la eliminación de sus datos en cualquier momento a través del perfil de usuario.\n\n'
+                '4. Al continuar, usted autoriza de manera voluntaria, previa e informada el tratamiento de sus datos personales.',
+                textAlign: TextAlign.justify,
+                style: TextStyle(fontSize: 14),
+              ),
+              const SizedBox(height: 16),
+              Center(
+                child: TextButton.icon(
+                  onPressed: () async {
+                    final Uri url = Uri.parse('https://www.sic.gov.co/sobre-la-proteccion-de-datos-personales');
+                    if (!await launchUrl(url)) {
+                      _showMsg('No se pudo abrir el enlace');
+                    }
+                  },
+                  icon: const Icon(Icons.open_in_new_rounded, size: 18),
+                  label: const Text('Ver regulación completa (SIC)', style: TextStyle(fontSize: 12)),
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('ENTENDIDO', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.indigo)),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _fetchUnits() async {
@@ -403,6 +452,8 @@ class _LoginPageState extends State<LoginPage> {
                       Expanded(child: _buildTextField(_apartmentController, 'Apto', Icons.door_front_door_outlined)),
                     ],
                   ),
+                  const SizedBox(height: 16),
+                  _buildTermsCheckbox(),
                 ],
                 
                 const SizedBox(height: 32),

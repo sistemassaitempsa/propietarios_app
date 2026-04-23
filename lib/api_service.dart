@@ -139,16 +139,168 @@ class ApiService {
     }
   }
 
-  Future<Map<String, dynamic>?> searchByPlate(String plate) async {
+  Future<Map<String, dynamic>?> searchByPlate(String plate, {int? userId}) async {
     try {
       final headers = await _getHeaders();
+      String url = '$baseUrl/search/plate/$plate';
+      if (userId != null) {
+        url += '?user_id=$userId';
+      }
       final response = await http.get(
-        Uri.parse('$baseUrl/search/plate/$plate'),
-        headers: headers
+        Uri.parse(url),
+        headers: headers,
       );
       return response.statusCode == 200 ? jsonDecode(response.body) : null;
     } catch (e) {
       return null;
+    }
+  }
+
+  // --- Permisos y Sincronización ---
+
+  Future<Map<String, dynamic>?> getMyProfile() async {
+    try {
+      final headers = await _getHeaders();
+      final response = await http.post(
+        Uri.parse('$baseUrl/auth/me'),
+        headers: headers,
+      );
+      return response.statusCode == 200 ? jsonDecode(response.body) : null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  Future<bool> toggleUserHistory(int userId, bool enabled) async {
+    try {
+      final headers = await _getHeaders();
+      final response = await http.post(
+        Uri.parse('$baseUrl/users/$userId/toggle-history'),
+        headers: headers,
+        body: jsonEncode({'enabled': enabled}),
+      );
+      return response.statusCode == 200;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  Future<bool> toggleUserActive(int userId, bool active) async {
+    try {
+      final headers = await _getHeaders();
+      final response = await http.post(
+        Uri.parse('$baseUrl/users/$userId/toggle-active'),
+        headers: headers,
+        body: jsonEncode({'active': active}),
+      );
+      return response.statusCode == 200;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  Future<bool> toggleUnitHistory(int unitId, bool enabled) async {
+    try {
+      final headers = await _getHeaders();
+      final response = await http.post(
+        Uri.parse('$baseUrl/units/$unitId/toggle-history'),
+        headers: headers,
+        body: jsonEncode({'enabled': enabled}),
+      );
+      return response.statusCode == 200;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  Future<List<dynamic>> getAllUsers({String? name, String? unit, String? plate}) async {
+    try {
+      final headers = await _getHeaders();
+      String url = '$baseUrl/admin/users?';
+      if (name != null && name.isNotEmpty) url += 'name=${Uri.encodeComponent(name)}&';
+      if (unit != null && unit.isNotEmpty) url += 'unit=${Uri.encodeComponent(unit)}&';
+      if (plate != null && plate.isNotEmpty) url += 'plate=${Uri.encodeComponent(plate)}&';
+
+      final response = await http.get(
+        Uri.parse('$baseUrl/search/plate/$plate'),
+        headers: headers
+      );
+      return response.statusCode == 200 ? jsonDecode(response.body) : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  Future<List<dynamic>> getAllUnits({String? name}) async {
+    try {
+      final headers = await _getHeaders();
+      String url = '$baseUrl/units';
+      if (name != null && name.isNotEmpty) {
+        url += '?name=${Uri.encodeComponent(name)}';
+      }
+      final response = await http.get(
+        Uri.parse(url),
+        headers: headers,
+      );
+      return response.statusCode == 200 ? jsonDecode(response.body) : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  Future<Map<String, dynamic>?> updateUnit(int id, Map<String, dynamic> data) async {
+    try {
+      final headers = await _getHeaders();
+      final response = await http.put(
+        Uri.parse('$baseUrl/units/$id'),
+        headers: headers,
+        body: jsonEncode(data),
+      );
+      return response.statusCode == 200 ? jsonDecode(response.body) : null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  Future<bool> toggleUserAdmin(int userId, bool isAdmin) async {
+    try {
+      final headers = await _getHeaders();
+      final response = await http.post(
+        Uri.parse('$baseUrl/users/$userId/toggle-admin'),
+        headers: headers,
+        body: jsonEncode({'is_admin': isAdmin}),
+      );
+      return response.statusCode == 200;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // --- Historial de Consultas ---
+
+  Future<List<dynamic>> getMyConsultations(int userId) async {
+    try {
+      final headers = await _getHeaders();
+      final response = await http.get(
+        Uri.parse('$baseUrl/consultations/my?user_id=$userId'),
+        headers: headers,
+      );
+      return response.statusCode == 200 ? jsonDecode(response.body) : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  Future<List<dynamic>> getOthersConsultations(int userId) async {
+    try {
+      final headers = await _getHeaders();
+      final response = await http.get(
+        Uri.parse('$baseUrl/consultations/others?user_id=$userId'),
+        headers: headers,
+      );
+      return response.statusCode == 200 ? jsonDecode(response.body) : [];
+    } catch (e) {
+      return [];
     }
   }
 }

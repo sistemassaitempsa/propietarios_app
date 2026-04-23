@@ -9,6 +9,9 @@ Una aplicación Flutter para la gestión de residentes y vehículos en conjuntos
 - **Contactos de Emergencia:** Módulo para agregar múltiples contactos que serán notificados en caso de problemas con un vehículo.
 - **Gestión de Vehículos:** Registro de carros y motos asociados a un contacto de emergencia específico.
 - **Consulta de Placas:** Módulo de seguridad que permite buscar un vehículo por su placa para obtener rápidamente el contacto del propietario y llamarlo o escribirle por WhatsApp.
+- **Panel de Administración:**
+    - **Gestión de Unidades:** Crear, editar, buscar y habilitar/inhabilitar conjuntos residenciales.
+    - **Gestión de Usuarios:** Buscador avanzado por nombre, unidad o placa. Visualización detallada de vehículos y contactos de emergencia. Control de activación de cuentas y permisos de historial.
 
 ## 📱 Capturas de Pantalla (Próximamente)
 *(Aquí puedes añadir imágenes de la app)*

@@ -1,3 +1,4 @@
+import 'package:shared_preferences/shared_preferences.dart';
 import 'api_service.dart';
 import 'database_helper.dart';
 
@@ -12,6 +13,8 @@ class DataRepository {
     final apiResponse = await _apiService.loginUser(email, password);
     
     if (apiResponse != null) {
+      final prefs = await SharedPreferences.getInstance();
+      
       // 2. Si la API devuelve un token, guardarlo automáticamente
       if (apiResponse.containsKey('token')) {
         await _apiService.saveToken(apiResponse['token']);
@@ -109,5 +112,17 @@ class DataRepository {
   Future<void> logout() async {
     await _apiService.clearToken();
     // Los datos locales se mantienen según requerimiento.
+  }
+
+  // --- Historial de Consultas ---
+
+  Future<List<dynamic>> getMyConsultations(int userId) async {
+    // Estas consultas siempre las traemos de la API para estar actualizados
+    return await _apiService.getMyConsultations(userId);
+  }
+
+  Future<List<dynamic>> getOthersConsultations(int userId) async {
+    // Estas consultas siempre las traemos de la API
+    return await _apiService.getOthersConsultations(userId);
   }
 }
