@@ -5,8 +5,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 class ApiService {
   // CONFIGURACIÓN GLOBAL: Cambia esta URL para apuntar a tu servidor
   static const String baseUrl =
-      "http://10.0.2.2:8000/api"; // Cambia a http://10.0.2.2:8000/api si usas emulador Android
-
+      //  "http://10.0.2.2:8000/api"; // Cambia a http://10.0.2.2:8000/api si usas emulador Android
+      "http://192.168.1.9:8000/api"; // Cambia a http://10.0.2.2:8000/api si usas emulador Android
+  // php artisan serve --host=0.0.0.0 --port=8000 comando para servir en toda la red local
   // --- Manejo del Token ---
 
   Future<Map<String, String>> _getHeaders() async {
@@ -242,7 +243,9 @@ class ApiService {
     }
   }
 
-  Future<Map<String, dynamic>?> addEmergencyContact(Map<String, dynamic> contactData) async {
+  Future<Map<String, dynamic>?> addEmergencyContact(
+    Map<String, dynamic> contactData,
+  ) async {
     try {
       final headers = await _getHeaders();
       final response = await http.post(
@@ -298,7 +301,9 @@ class ApiService {
     }
   }
 
-  Future<Map<String, dynamic>?> addVehicle(Map<String, dynamic> vehicleData) async {
+  Future<Map<String, dynamic>?> addVehicle(
+    Map<String, dynamic> vehicleData,
+  ) async {
     try {
       final headers = await _getHeaders();
       final response = await http.post(
@@ -339,17 +344,17 @@ class ApiService {
     }
   }
 
-  Future<Map<String, dynamic>?> searchByPlate(String plate, {int? userId}) async {
+  Future<Map<String, dynamic>?> searchByPlate(
+    String plate, {
+    int? userId,
+  }) async {
     try {
       final headers = await _getHeaders();
       String url = '$baseUrl/search/plate/$plate';
       if (userId != null) {
         url += '?user_id=$userId';
       }
-      final response = await http.get(
-        Uri.parse(url),
-        headers: headers,
-      );
+      final response = await http.get(Uri.parse(url), headers: headers);
       return response.statusCode == 200 ? jsonDecode(response.body) : null;
     } catch (e) {
       return null;
@@ -413,18 +418,22 @@ class ApiService {
     }
   }
 
-  Future<List<dynamic>> getAllUsers({String? name, String? unit, String? plate}) async {
+  Future<List<dynamic>> getAllUsers({
+    String? name,
+    String? unit,
+    String? plate,
+  }) async {
     try {
       final headers = await _getHeaders();
       String url = '$baseUrl/admin/users?';
-      if (name != null && name.isNotEmpty) url += 'name=${Uri.encodeComponent(name)}&';
-      if (unit != null && unit.isNotEmpty) url += 'unit=${Uri.encodeComponent(unit)}&';
-      if (plate != null && plate.isNotEmpty) url += 'plate=${Uri.encodeComponent(plate)}&';
+      if (name != null && name.isNotEmpty)
+        url += 'name=${Uri.encodeComponent(name)}&';
+      if (unit != null && unit.isNotEmpty)
+        url += 'unit=${Uri.encodeComponent(unit)}&';
+      if (plate != null && plate.isNotEmpty)
+        url += 'plate=${Uri.encodeComponent(plate)}&';
 
-      final response = await http.get(
-        Uri.parse(url),
-        headers: headers,
-      );
+      final response = await http.get(Uri.parse(url), headers: headers);
       return response.statusCode == 200 ? jsonDecode(response.body) : [];
     } catch (e) {
       return [];
@@ -438,17 +447,17 @@ class ApiService {
       if (name != null && name.isNotEmpty) {
         url += '?name=${Uri.encodeComponent(name)}';
       }
-      final response = await http.get(
-        Uri.parse(url),
-        headers: headers,
-      );
+      final response = await http.get(Uri.parse(url), headers: headers);
       return response.statusCode == 200 ? jsonDecode(response.body) : [];
     } catch (e) {
       return [];
     }
   }
 
-  Future<Map<String, dynamic>?> updateUnit(int id, Map<String, dynamic> data) async {
+  Future<Map<String, dynamic>?> updateUnit(
+    int id,
+    Map<String, dynamic> data,
+  ) async {
     try {
       final headers = await _getHeaders();
       final response = await http.put(
