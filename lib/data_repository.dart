@@ -6,6 +6,12 @@ class DataRepository {
   final ApiService _apiService = ApiService();
   final DatabaseHelper _dbHelper = DatabaseHelper();
 
+  Future<Map<String, dynamic>?> findUnitByCode(String code) async {
+    return await _apiService.findUnitByCode(code);
+  }
+
+  ApiService getApiService() => _apiService;
+
   // --- Usuarios ---
 
   Future<Map<String, dynamic>?> login(String email, String password) async {

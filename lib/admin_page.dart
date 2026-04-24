@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'api_service.dart';
 
 class AdminPage extends StatefulWidget {
@@ -195,6 +196,10 @@ class _AdminPageState extends State<AdminPage> with SingleTickerProviderStateMix
                     const SnackBar(content: Text('Unidad creada exitosamente')),
                   );
                 }
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('El nombre es obligatorio')),
+                );
               }
             },
             child: const Text('Guardar'),
@@ -206,6 +211,7 @@ class _AdminPageState extends State<AdminPage> with SingleTickerProviderStateMix
 
   void _showEditUnitDialog(dynamic unit) {
     final nameController = TextEditingController(text: unit['name']);
+    final codeController = TextEditingController(text: unit['code'] ?? '');
     final descController = TextEditingController(text: unit['description'] ?? '');
 
     showDialog(
@@ -218,6 +224,13 @@ class _AdminPageState extends State<AdminPage> with SingleTickerProviderStateMix
             TextField(
               controller: nameController,
               decoration: const InputDecoration(labelText: 'Nombre de la Unidad'),
+            ),
+            TextField(
+              controller: codeController,
+              decoration: const InputDecoration(
+                labelText: 'Código Único (Generado automáticamente)',
+                enabled: false,
+              ),
             ),
             TextField(
               controller: descController,
@@ -244,6 +257,10 @@ class _AdminPageState extends State<AdminPage> with SingleTickerProviderStateMix
                     const SnackBar(content: Text('Unidad actualizada exitosamente')),
                   );
                 }
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('El nombre es obligatorio')),
+                );
               }
             },
             child: const Text('Guardar'),
@@ -511,10 +528,48 @@ class _AdminPageState extends State<AdminPage> with SingleTickerProviderStateMix
                               children: [
                                 ListTile(
                                   leading: Icon(Icons.business, color: isActive ? Colors.indigo : Colors.grey),
-                                  title: Text(unit['name'], style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    color: isActive ? Colors.black : Colors.grey,
-                                  )),
+                                  title: Row(
+                                    children: [
+                                      Expanded(
+                                        child: Text(unit['name'], style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          color: isActive ? Colors.black : Colors.grey,
+                                        )),
+                                      ),
+                                      if (unit['code'] != null)
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                          decoration: BoxDecoration(
+                                            color: Colors.amber[100],
+                                            borderRadius: BorderRadius.circular(4),
+                                            border: Border.all(color: Colors.amber[300]!),
+                                          ),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Text(
+                                                unit['code'],
+                                                style: const TextStyle(
+                                                  fontSize: 12,
+                                                  fontWeight: FontWeight.bold,
+                                                  fontFamily: 'monospace',
+                                                ),
+                                              ),
+                                              const SizedBox(width: 4),
+                                              InkWell(
+                                                onTap: () {
+                                                  Clipboard.setData(ClipboardData(text: unit['code']));
+                                                  ScaffoldMessenger.of(context).showSnackBar(
+                                                    SnackBar(content: Text('Código ${unit['code']} copiado')),
+                                                  );
+                                                },
+                                                child: const Icon(Icons.copy, size: 14, color: Colors.brown),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                    ],
+                                  ),
                                   subtitle: Text('${unit['description'] ?? 'Sin descripción'}\nPropietarios: $userCount'),
                                   trailing: Row(
                                     mainAxisSize: MainAxisSize.min,

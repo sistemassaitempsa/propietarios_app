@@ -5,8 +5,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 class ApiService {
   // CONFIGURACIÓN GLOBAL: Cambia esta URL para apuntar a tu servidor
   static const String baseUrl =
-      //  "http://10.0.2.2:8000/api"; // Cambia a http://10.0.2.2:8000/api si usas emulador Android
-      "http://192.168.1.9:8000/api"; // Cambia a http://10.0.2.2:8000/api si usas emulador Android
+       "http://10.0.2.2:8000/api"; // Cambia a http://10.0.2.2:8000/api si usas emulador Android
+    //  "http://192.168.1.9:8000/api"; // Cambia a http://10.0.2.2:8000/api si usas emulador Android
   // php artisan serve --host=0.0.0.0 --port=8000 comando para servir en toda la red local
   // --- Manejo del Token ---
 
@@ -179,6 +179,21 @@ class ApiService {
       return [];
     } catch (e) {
       return [];
+    }
+  }
+
+  Future<Map<String, dynamic>?> findUnitByCode(String code) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/units/code/$code'),
+        headers: {'Content-Type': 'application/json'},
+      );
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      }
+      return null;
+    } catch (e) {
+      return null;
     }
   }
 

@@ -23,6 +23,7 @@ class _LoginPageState extends State<LoginPage> {
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _towerController = TextEditingController();
   final TextEditingController _apartmentController = TextEditingController();
+  final TextEditingController _unitCodeController = TextEditingController();
   
   bool _isPasswordVisible = false;
   bool _isRegisterMode = false;
@@ -176,19 +177,24 @@ class _LoginPageState extends State<LoginPage> {
     String password = _passwordController.text;
     String firstName = _firstNameController.text;
     String lastName = _lastNameController.text;
+    String unitCode = _unitCodeController.text.trim();
 
-    if (email.isEmpty || password.isEmpty || firstName.isEmpty || lastName.isEmpty) {
-      _showMsg('Nombre, apellido, correo y contraseña son obligatorios');
-      return;
-    }
-
-    if (_selectedUnitId == null) {
-      _showMsg('Debes seleccionar una unidad');
+    if (email.isEmpty || password.isEmpty || firstName.isEmpty || lastName.isEmpty || unitCode.isEmpty) {
+      _showMsg('Todos los campos son obligatorios, incluido el código de unidad');
       return;
     }
 
     if (!_isAcceptedTerms) {
       _showMsg('Debes aceptar la política de tratamiento de datos personales');
+      return;
+    }
+
+    setState(() => _isLoadingUnits = true);
+    final unit = await _apiService.findUnitByCode(unitCode);
+    setState(() => _isLoadingUnits = false);
+
+    if (unit == null) {
+      _showMsg('El código de unidad no es válido');
       return;
     }
 
@@ -200,7 +206,7 @@ class _LoginPageState extends State<LoginPage> {
       'phone': _phoneController.text,
       'tower': _towerController.text,
       'apartment': _apartmentController.text,
-      'unit_id': _selectedUnitId,
+      'unit_id': unit['id'],
     };
 
     bool success = await _repository.register(email, password, userData);
@@ -340,36 +346,6 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
-  DropdownButtonFormField<int> _buildUnitDropdown() {
-    return DropdownButtonFormField<int>(
-      value: _selectedUnitId,
-      icon: _isLoadingUnits 
-        ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-        : Icon(Icons.keyboard_arrow_down_rounded, color: Colors.blueGrey[400]),
-      decoration: InputDecoration(
-        labelText: 'Unidad/Conjunto',
-        labelStyle: TextStyle(color: Colors.blueGrey[400], fontSize: 14),
-        filled: true,
-        fillColor: Colors.white,
-        prefixIcon: Icon(Icons.business_rounded, color: Colors.indigo[400], size: 22),
-        contentPadding: const EdgeInsets.symmetric(vertical: 18, horizontal: 16),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: BorderSide.none,
-        ),
-      ),
-      items: _availableUnits.isEmpty 
-        ? [const DropdownMenuItem(value: null, child: Text('No hay unidades disponibles', style: TextStyle(color: Colors.red)))]
-        : _availableUnits.map((unit) {
-            return DropdownMenuItem<int>(
-              value: unit['id'],
-              child: Text(unit['name'], style: const TextStyle(fontSize: 15)),
-            );
-          }).toList(),
-      onChanged: _isLoadingUnits ? null : (val) => setState(() => _selectedUnitId = val),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -443,7 +419,7 @@ class _LoginPageState extends State<LoginPage> {
                 
                 if (_isRegisterMode) ...[
                   const SizedBox(height: 16),
-                  _buildUnitDropdown(),
+                  _buildTextField(_unitCodeController, 'Código de Unidad Residencial', Icons.business_rounded),
                   const SizedBox(height: 16),
                   Row(
                     children: [

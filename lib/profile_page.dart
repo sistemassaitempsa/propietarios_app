@@ -22,11 +22,13 @@ class _ProfilePageState extends State<ProfilePage> {
   final TextEditingController _towerController = TextEditingController();
   final TextEditingController _apartmentController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _unitCodeController = TextEditingController();
   
   bool _isPasswordVisible = false;
   bool _isLoading = true;
   int? _userId;
   String? _profileImagePath;
+  String? _currentUnitName;
   List<Map<String, dynamic>> _vehicles = [];
   List<Map<String, dynamic>> _emergencyContacts = [];
   
@@ -57,10 +59,37 @@ class _ProfilePageState extends State<ProfilePage> {
       // Load all available units
       _availableUnits = await _dbHelper.getUnits();
       
+      // Get current unit name
+      if (_selectedUnitId != null) {
+        final unit = _availableUnits.firstWhere((u) => u['id'] == _selectedUnitId, orElse: () => {});
+        _currentUnitName = unit.isNotEmpty ? unit['name'] : 'Desconocida';
+      }
+
       await _loadEmergencyContacts();
       await _loadVehicles();
       if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  Future<void> _changeUnit() async {
+    String code = _unitCodeController.text.trim();
+    if (code.isEmpty) {
+      _showMsg('Ingresa un código de unidad');
+      return;
+    }
+
+    final unit = await _repository.getApiService().findUnitByCode(code);
+    if (unit == null) {
+      _showMsg('Código de unidad no válido');
+      return;
+    }
+
+    setState(() {
+      _selectedUnitId = unit['id'];
+      _currentUnitName = unit['name'];
+      _unitCodeController.clear();
+    });
+    _showMsg('Unidad cambiada a: ${_currentUnitName}. No olvides guardar los cambios.');
   }
 
   Future<void> _pickImage() async {
@@ -313,19 +342,46 @@ class _ProfilePageState extends State<ProfilePage> {
               const SizedBox(height: 12),
               _buildPasswordField(),
               const SizedBox(height: 12),
-              DropdownButtonFormField<int>(
-                value: _selectedUnitId,
-                decoration: const InputDecoration(
-                  labelText: 'Unidad/Conjunto',
-                  prefixIcon: Icon(Icons.business, color: Colors.indigo, size: 20),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.indigo[50],
+                  borderRadius: BorderRadius.circular(10),
                 ),
-                items: _availableUnits.map((unit) {
-                  return DropdownMenuItem<int>(
-                    value: unit['id'],
-                    child: Text(unit['name']),
-                  );
-                }).toList(),
-                onChanged: (val) => setState(() => _selectedUnitId = val),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Unidad actual: ${_currentUnitName ?? 'Cargando...'}',
+                      style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.indigo),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: _unitCodeController,
+                            decoration: const InputDecoration(
+                              labelText: 'Nuevo Código de Unidad',
+                              hintText: 'Ej: UNIT123',
+                              isDense: true,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        ElevatedButton(
+                          onPressed: _changeUnit,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.indigo,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                          ),
+                          child: const Text('Cambiar'),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
               const SizedBox(height: 12),
               Row(
