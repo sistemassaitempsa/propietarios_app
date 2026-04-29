@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'dart:math';
 import 'api_service.dart';
 
 class AdminPage extends StatefulWidget {
@@ -12,7 +13,15 @@ class AdminPage extends StatefulWidget {
 class _AdminPageState extends State<AdminPage> with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final ApiService _apiService = ApiService();
-  
+
+  String _generateRandomCode(int length) {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    final random = Random();
+    return String.fromCharCodes(Iterable.generate(
+      length, (_) => chars.codeUnitAt(random.nextInt(chars.length)),
+    ));
+  }
+
   List<dynamic> _users = [];
   List<dynamic> _units = [];
   bool _isLoadingUsers = true;
@@ -159,52 +168,75 @@ class _AdminPageState extends State<AdminPage> with SingleTickerProviderStateMix
   void _showAddUnitDialog() {
     final nameController = TextEditingController();
     final descController = TextEditingController();
+    final codeController = TextEditingController(text: _generateRandomCode(6));
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Agregar Nueva Unidad'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: nameController,
-              decoration: const InputDecoration(labelText: 'Nombre de la Unidad (ej: Conjunto A)'),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Agregar Nueva Unidad'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: nameController,
+                  decoration: const InputDecoration(labelText: 'Nombre de la Unidad (ej: Conjunto A)'),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: codeController,
+                  decoration: InputDecoration(
+                    labelText: 'Código Único',
+                    suffixIcon: IconButton(
+                      icon: const Icon(Icons.refresh),
+                      onPressed: () {
+                        setDialogState(() {
+                          codeController.text = _generateRandomCode(6);
+                        });
+                      },
+                      tooltip: 'Generar nuevo código',
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: descController,
+                  decoration: const InputDecoration(labelText: 'Descripción (opcional)'),
+                ),
+              ],
             ),
-            TextField(
-              controller: descController,
-              decoration: const InputDecoration(labelText: 'Descripción (opcional)'),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancelar'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                if (nameController.text.isNotEmpty && codeController.text.isNotEmpty) {
+                  final result = await _apiService.addUnit({
+                    'name': nameController.text,
+                    'description': descController.text,
+                    'code': codeController.text,
+                  });
+                  if (result != null) {
+                    Navigator.pop(context);
+                    _fetchUnits();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Unidad creada exitosamente')),
+                    );
+                  }
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('El nombre y el código son obligatorios')),
+                  );
+                }
+              },
+              child: const Text('Guardar'),
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancelar'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              if (nameController.text.isNotEmpty) {
-                final result = await _apiService.addUnit({
-                  'name': nameController.text,
-                  'description': descController.text,
-                });
-                if (result != null) {
-                  Navigator.pop(context);
-                  _fetchUnits();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Unidad creada exitosamente')),
-                  );
-                }
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('El nombre es obligatorio')),
-                );
-              }
-            },
-            child: const Text('Guardar'),
-          ),
-        ],
       ),
     );
   }
@@ -216,56 +248,71 @@ class _AdminPageState extends State<AdminPage> with SingleTickerProviderStateMix
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Editar Unidad'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: nameController,
-              decoration: const InputDecoration(labelText: 'Nombre de la Unidad'),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Editar Unidad'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: nameController,
+                  decoration: const InputDecoration(labelText: 'Nombre de la Unidad'),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: codeController,
+                  decoration: InputDecoration(
+                    labelText: 'Código Único',
+                    suffixIcon: IconButton(
+                      icon: const Icon(Icons.refresh),
+                      onPressed: () {
+                        setDialogState(() {
+                          codeController.text = _generateRandomCode(6);
+                        });
+                      },
+                      tooltip: 'Generar nuevo código',
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: descController,
+                  decoration: const InputDecoration(labelText: 'Descripción'),
+                ),
+              ],
             ),
-            TextField(
-              controller: codeController,
-              decoration: const InputDecoration(
-                labelText: 'Código Único (Generado automáticamente)',
-                enabled: false,
-              ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancelar'),
             ),
-            TextField(
-              controller: descController,
-              decoration: const InputDecoration(labelText: 'Descripción'),
+            ElevatedButton(
+              onPressed: () async {
+                if (nameController.text.isNotEmpty && codeController.text.isNotEmpty) {
+                  final result = await _apiService.updateUnit(unit['id'], {
+                    'name': nameController.text,
+                    'description': descController.text,
+                    'code': codeController.text,
+                  });
+                  if (result != null) {
+                    Navigator.pop(context);
+                    _fetchUnits();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Unidad actualizada exitosamente')),
+                    );
+                  }
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('El nombre y el código son obligatorios')),
+                  );
+                }
+              },
+              child: const Text('Guardar'),
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancelar'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              if (nameController.text.isNotEmpty) {
-                final result = await _apiService.updateUnit(unit['id'], {
-                  'name': nameController.text,
-                  'description': descController.text,
-                });
-                if (result != null) {
-                  Navigator.pop(context);
-                  _fetchUnits();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Unidad actualizada exitosamente')),
-                  );
-                }
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('El nombre es obligatorio')),
-                );
-              }
-            },
-            child: const Text('Guardar'),
-          ),
-        ],
       ),
     );
   }
