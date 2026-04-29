@@ -446,6 +446,7 @@ class _LoginPageState extends State<LoginPage> {
                 const SizedBox(height: 16),
                 _buildPasswordField(),
                 
+                /* // Opción oculta temporalmente
                 if (!_isRegisterMode) 
                   Align(
                     alignment: Alignment.centerRight,
@@ -464,6 +465,7 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                     ),
                   ),
+                */
 
                 if (_isRegisterMode) ...[
                   const SizedBox(height: 16),
