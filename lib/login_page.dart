@@ -266,6 +266,51 @@ class _LoginPageState extends State<LoginPage> {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
   }
 
+  void _showForgotPasswordDialog() {
+    final TextEditingController resetEmailController = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('Recuperar Contraseña', style: TextStyle(fontWeight: FontWeight.bold)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'Ingresa tu correo electrónico y te enviaremos un código para restablecer tu contraseña.',
+              style: TextStyle(fontSize: 14, color: Colors.blueGrey),
+            ),
+            const SizedBox(height: 20),
+            _buildTextField(resetEmailController, 'Correo Electrónico', Icons.email_outlined, type: TextInputType.emailAddress),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('CANCELAR', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              if (resetEmailController.text.isNotEmpty) {
+                // Aquí se llamaría a la API en el futuro
+                Navigator.pop(context);
+                _showMsg('Si el correo está registrado, recibirás las instrucciones en breve.');
+              } else {
+                _showMsg('Por favor, ingresa tu correo');
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.indigo,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            child: const Text('ENVIAR'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildTextField(TextEditingController controller, String label, IconData icon, {TextInputType type = TextInputType.text}) {
     return Container(
       decoration: BoxDecoration(
@@ -273,9 +318,9 @@ class _LoginPageState extends State<LoginPage> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            color: Colors.black.withOpacity(0.02),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
@@ -287,14 +332,6 @@ class _LoginPageState extends State<LoginPage> {
           labelText: label,
           labelStyle: TextStyle(color: Colors.blueGrey[400], fontSize: 14),
           prefixIcon: Icon(icon, color: Colors.indigo[400], size: 22),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(16),
-            borderSide: BorderSide.none,
-          ),
-          filled: true,
-          fillColor: Colors.white,
-          contentPadding: const EdgeInsets.symmetric(vertical: 18, horizontal: 16),
-          floatingLabelBehavior: FloatingLabelBehavior.never,
           hintText: label,
           hintStyle: TextStyle(color: Colors.blueGrey[200], fontSize: 14),
         ),
@@ -309,9 +346,9 @@ class _LoginPageState extends State<LoginPage> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            color: Colors.black.withOpacity(0.02),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
@@ -331,14 +368,6 @@ class _LoginPageState extends State<LoginPage> {
             ),
             onPressed: () => setState(() => _isPasswordVisible = !_isPasswordVisible),
           ),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(16),
-            borderSide: BorderSide.none,
-          ),
-          filled: true,
-          fillColor: Colors.white,
-          contentPadding: const EdgeInsets.symmetric(vertical: 18, horizontal: 16),
-          floatingLabelBehavior: FloatingLabelBehavior.never,
           hintText: 'Contraseña',
           hintStyle: TextStyle(color: Colors.blueGrey[200], fontSize: 14),
         ),
@@ -417,6 +446,25 @@ class _LoginPageState extends State<LoginPage> {
                 const SizedBox(height: 16),
                 _buildPasswordField(),
                 
+                if (!_isRegisterMode) 
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      onPressed: () {
+                        // Navegar a pantalla de recuperación o mostrar diálogo
+                        _showForgotPasswordDialog();
+                      },
+                      style: TextButton.styleFrom(
+                        foregroundColor: Colors.indigo[600],
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                      ),
+                      child: const Text(
+                        '¿Olvidaste tu contraseña?',
+                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                  ),
+
                 if (_isRegisterMode) ...[
                   const SizedBox(height: 16),
                   _buildTextField(_unitCodeController, 'Código de Unidad Residencial', Icons.business_rounded),

@@ -314,10 +314,9 @@ class _AdminPageState extends State<AdminPage> with SingleTickerProviderStateMix
                 flex: 2,
                 child: DropdownButtonFormField<String>(
                   value: _searchCriteria,
-                  decoration: InputDecoration(
+                  decoration: const InputDecoration(
                     labelText: 'Filtrar por',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 10),
+                    contentPadding: EdgeInsets.symmetric(horizontal: 10),
                   ),
                   items: ['Nombre', 'Unidad', 'Placa']
                       .map((label) => DropdownMenuItem(
@@ -342,7 +341,6 @@ class _AdminPageState extends State<AdminPage> with SingleTickerProviderStateMix
                   decoration: InputDecoration(
                     hintText: 'Buscar...',
                     prefixIcon: const Icon(Icons.search),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                     suffixIcon: _userSearchController.text.isNotEmpty
                         ? IconButton(
                             icon: const Icon(Icons.clear),
@@ -505,9 +503,6 @@ class _AdminPageState extends State<AdminPage> with SingleTickerProviderStateMix
             decoration: InputDecoration(
               hintText: 'Buscar unidad...',
               prefixIcon: const Icon(Icons.search),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
               suffixIcon: _unitSearchController.text.isNotEmpty
                   ? IconButton(
                       icon: const Icon(Icons.clear),

@@ -88,13 +88,10 @@ class _SearchPageState extends State<SearchPage> {
             const SizedBox(height: 20),
             TextField(
               controller: _plateController,
-              decoration: InputDecoration(
+              decoration: const InputDecoration(
                 labelText: 'Número de Placa',
                 hintText: 'Ej: ABC123',
-                filled: true,
-                fillColor: Colors.white,
-                prefixIcon: const Icon(Icons.search, color: Colors.indigo),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                prefixIcon: Icon(Icons.search, color: Colors.indigo),
               ),
               textCapitalization: TextCapitalization.characters,
             ),
