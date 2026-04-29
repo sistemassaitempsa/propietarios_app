@@ -71,16 +71,46 @@ class _HistoryPageState extends State<HistoryPage> with SingleTickerProviderStat
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Historial de Consultas'),
-        bottom: TabBar(
-          controller: _tabController,
-          labelColor: Colors.white,
-          unselectedLabelColor: Colors.white70,
-          indicatorColor: Colors.white,
-          tabs: const [
-            Tab(text: 'Mis Consultas'),
-            Tab(text: 'Consultas a mi Vehículo'),
-          ],
+        title: const Text(
+          'HISTORIAL', 
+          style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 1.2, fontSize: 18)
+        ),
+        elevation: 0,
+        centerTitle: true,
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(50),
+          child: Container(
+            decoration: const BoxDecoration(
+              color: Colors.indigo,
+              border: Border(bottom: BorderSide(color: Colors.white24, width: 0.5))
+            ),
+            child: TabBar(
+              controller: _tabController,
+              labelColor: Colors.white,
+              unselectedLabelColor: const Color(0xFFC5CAE9), // Indigo claro sólido
+              indicatorColor: Colors.white,
+              indicatorWeight: 4,
+              indicatorSize: TabBarIndicatorSize.tab,
+              // Usamos el mismo estilo para ambos estados para evitar que el motor de Flutter 
+              // intente animar el peso de la fuente, lo que causa el efecto borroso/dañado.
+              labelStyle: const TextStyle(
+                fontWeight: FontWeight.w800, 
+                fontSize: 13, 
+                letterSpacing: 0.5,
+                fontFamily: 'Roboto', // Forzamos una fuente estándar
+              ),
+              unselectedLabelStyle: const TextStyle(
+                fontWeight: FontWeight.w800, 
+                fontSize: 13, 
+                letterSpacing: 0.5,
+                fontFamily: 'Roboto',
+              ),
+              tabs: const [
+                Tab(text: 'Mis Consultas'),
+                Tab(text: 'A mi Vehículo'),
+              ],
+            ),
+          ),
         ),
       ),
       body: _isLoading
@@ -117,15 +147,35 @@ class _HistoryPageState extends State<HistoryPage> with SingleTickerProviderStat
         final formattedDate = DateFormat('dd/MM/yyyy hh:mm a').format(date);
 
         return Card(
-          margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+          elevation: 2,
+          margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           child: ListTile(
-            leading: const Icon(Icons.search, color: Colors.blue),
-            title: Text('Placa: ${vehicle['plate']}'),
+            leading: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.blue[50],
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.search, color: Colors.blue, size: 24),
+            ),
+            title: Text(
+              'Placa: ${vehicle['plate']}',
+              style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF1A237E), fontSize: 16),
+            ),
             subtitle: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Vehículo: ${vehicle['brand']} (${vehicle['color']})'),
-                Text('Fecha: $formattedDate', style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                const SizedBox(height: 4),
+                Text(
+                  'Vehículo: ${vehicle['brand']} (${vehicle['color']})',
+                  style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.w500),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Fecha: $formattedDate',
+                  style: TextStyle(fontSize: 12, color: Colors.blueGrey[600], fontWeight: FontWeight.w400),
+                ),
               ],
             ),
           ),
@@ -154,22 +204,48 @@ class _HistoryPageState extends State<HistoryPage> with SingleTickerProviderStat
         final formattedDate = DateFormat('dd/MM/yyyy hh:mm a').format(date);
 
         return Card(
-          margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+          elevation: 2,
+          margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           child: ListTile(
-            leading: const Icon(Icons.visibility, color: Colors.orange),
-            title: Text('Consultado por: ${user['name']}'),
+            leading: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.orange[50],
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.visibility, color: Colors.orange, size: 24),
+            ),
+            title: Text(
+              'Consultado por: ${user['name']}',
+              style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF1A237E), fontSize: 16),
+            ),
             subtitle: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Tu vehículo: ${vehicle['plate']} - ${vehicle['brand']}'),
-                Text('Fecha: $formattedDate', style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                const SizedBox(height: 4),
+                Text(
+                  'Tu vehículo: ${vehicle['plate']} - ${vehicle['brand']}',
+                  style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.w500),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Fecha: $formattedDate',
+                  style: TextStyle(fontSize: 12, color: Colors.blueGrey[600], fontWeight: FontWeight.w400),
+                ),
               ],
             ),
-            trailing: IconButton(
-              icon: const Icon(Icons.info_outline),
-              onPressed: () {
-                _showUserDetail(user);
-              },
+            trailing: Container(
+              decoration: BoxDecoration(
+                color: Colors.indigo[50],
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: IconButton(
+                icon: const Icon(Icons.info_outline, color: Colors.indigo),
+                onPressed: () {
+                  _showUserDetail(user);
+                },
+              ),
             ),
           ),
         );
