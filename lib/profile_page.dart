@@ -107,15 +107,47 @@ class _ProfilePageState extends State<ProfilePage> {
 
   Future<void> _loadEmergencyContacts() async {
     if (_userId != null) {
+      // 1. Intentar cargar desde API
+      final apiContacts = await _repository.getApiService().getEmergencyContacts(_userId!);
+      if (apiContacts.isNotEmpty) {
+        // Sincronizar con local
+        for (var contact in apiContacts) {
+          await _dbHelper.addEmergencyContactWithId(
+            contact['id'], 
+            _userId!, 
+            contact['name'], 
+            contact['phone'], 
+            contact['has_whatsapp'] == 1 || contact['has_whatsapp'] == true
+          );
+        }
+      }
+
+      // 2. Cargar desde local (que ahora está sincronizado)
       final contacts = await _dbHelper.getEmergencyContacts(_userId!);
-      setState(() => _emergencyContacts = contacts);
+      if (mounted) setState(() => _emergencyContacts = contacts);
     }
   }
 
   Future<void> _loadVehicles() async {
     if (_userId != null) {
+      // 1. Intentar cargar desde API
+      final apiVehicles = await _repository.getApiService().getVehicles(_userId!);
+      if (apiVehicles.isNotEmpty) {
+        // Sincronizar con local
+        for (var v in apiVehicles) {
+          await _dbHelper.addVehicleWithId(v['id'], _userId!, {
+            'type': v['type'],
+            'brand': v['brand'],
+            'color': v['color'],
+            'plate': v['plate'],
+            'emergency_contact_id': v['emergency_contact_id'],
+          });
+        }
+      }
+
+      // 2. Cargar desde local
       final vehicles = await _dbHelper.getVehiclesWithContacts(_userId!);
-      setState(() => _vehicles = vehicles);
+      if (mounted) setState(() => _vehicles = vehicles);
     }
   }
 
@@ -447,7 +479,7 @@ class _ProfilePageState extends State<ProfilePage> {
           leading: const Icon(Icons.contact_phone, color: Colors.red),
           title: Row(
             children: [
-              Text(c['name']),
+              Expanded(child: Text(c['name'], overflow: TextOverflow.ellipsis)),
               if (c['has_whatsapp'] == 1) ...[
                 const SizedBox(width: 8),
                 const Icon(Icons.message, color: Colors.green, size: 18),

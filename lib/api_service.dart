@@ -5,8 +5,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 class ApiService {
   // CONFIGURACIÓN GLOBAL: Cambia esta URL para apuntar a tu servidor
   static const String baseUrl =
-      //  "http://10.0.2.2:8000/api"; // Cambia a http://10.0.2.2:8000/api si usas emulador Android
-      "http://192.168.1.19:8000/api"; // Cambia a http://10.0.2.2:8000/api si usas emulador Android
+      //  "http://10.0.2.2:8000/api"; // Emulador Android
+      "http://192.168.1.19:8000/api"; // Servidor en red local (Cambia esta IP por la de tu PC)
   // php artisan serve --host=0.0.0.0 --port=8000 comando para servir en toda la red local
   // --- Manejo del Token ---
 
