@@ -370,7 +370,8 @@ class _AdminPageState extends State<AdminPage> with SingleTickerProviderStateMix
                         final bool isHistoryEnabled = user['history_enabled'] == true || user['history_enabled'] == 1;
                         final bool isActive = user['active'] == true || user['active'] == 1;
                         final List<dynamic> vehicles = user['vehicles'] ?? [];
-                        final List<dynamic> contacts = user['emergencyContacts'] ?? [];
+                        // En Laravel con camelCase por defecto para relaciones
+                        final List<dynamic> contacts = user['emergency_contacts'] ?? user['emergencyContacts'] ?? [];
 
                         return Card(
                           margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
@@ -393,8 +394,8 @@ class _AdminPageState extends State<AdminPage> with SingleTickerProviderStateMix
                                 ),
                               ],
                             ),
-                            title: Text('${user['firstName']} ${user['lastName']}'),
-                            subtitle: Text('Unidad: ${user['unit']?['name'] ?? 'N/A'} - Apt: ${user['apartment']}'),
+                            title: Text('${user['firstName'] ?? ''} ${user['lastName'] ?? ''}'.trim().isEmpty ? (user['name'] ?? 'Usuario') : '${user['firstName'] ?? ''} ${user['lastName'] ?? ''}'),
+                            subtitle: Text('Unidad: ${user['unit']?['name'] ?? 'N/A'} - Apt: ${user['apartment'] ?? 'N/A'}'),
                             children: [
                               const Divider(),
                               Padding(
@@ -443,7 +444,7 @@ class _AdminPageState extends State<AdminPage> with SingleTickerProviderStateMix
                                       ],
                                     ),
                                     const SizedBox(height: 8),
-                                    Text('Email: ${user['email']}', style: const TextStyle(fontSize: 13, color: Colors.blueGrey)),
+                                    Text('Email: ${user['email'] ?? 'N/A'}', style: const TextStyle(fontSize: 13, color: Colors.blueGrey)),
                                     const SizedBox(height: 12),
                                     const Text('Vehículos:', style: TextStyle(fontWeight: FontWeight.bold)),
                                     if (vehicles.isEmpty)
@@ -452,10 +453,16 @@ class _AdminPageState extends State<AdminPage> with SingleTickerProviderStateMix
                                         child: Text('No tiene vehículos registrados', style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic)),
                                       )
                                     else
-                                      ...vehicles.map((v) => Padding(
-                                        padding: const EdgeInsets.only(left: 8.0, top: 2.0),
-                                        child: Text('• ${v['brand']} ${v['model']} - Placa: ${v['plate']}', style: const TextStyle(fontSize: 12)),
-                                      )),
+                                      ...vehicles.map((v) {
+                                        final String brand = v['brand'] ?? '';
+                                        final String model = v['model'] ?? '';
+                                        final String plate = v['plate'] ?? 'N/A';
+                                        final String vehicleInfo = '${brand} ${model}'.trim();
+                                        return Padding(
+                                          padding: const EdgeInsets.only(left: 8.0, top: 2.0),
+                                          child: Text('• ${vehicleInfo.isEmpty ? 'Vehículo' : vehicleInfo} - Placa: $plate', style: const TextStyle(fontSize: 12)),
+                                        );
+                                      }),
                                     
                                     const SizedBox(height: 12),
                                     const Text('Contactos de Emergencia:', style: TextStyle(fontWeight: FontWeight.bold)),
@@ -465,10 +472,15 @@ class _AdminPageState extends State<AdminPage> with SingleTickerProviderStateMix
                                         child: Text('No tiene contactos registrados', style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic)),
                                       )
                                     else
-                                      ...contacts.map((c) => Padding(
-                                        padding: const EdgeInsets.only(left: 8.0, top: 2.0),
-                                        child: Text('• ${c['name']} (${c['relationship']}): ${c['phone']}', style: const TextStyle(fontSize: 12)),
-                                      )),
+                                      ...contacts.map((c) {
+                                        final String name = c['name'] ?? 'N/A';
+                                        final String relationship = c['relationship'] != null ? ' (${c['relationship']})' : '';
+                                        final String phone = c['phone'] ?? 'N/A';
+                                        return Padding(
+                                          padding: const EdgeInsets.only(left: 8.0, top: 2.0),
+                                          child: Text('• $name$relationship: $phone', style: const TextStyle(fontSize: 12)),
+                                        );
+                                      }),
                                     const SizedBox(height: 8),
                                   ],
                                 ),
