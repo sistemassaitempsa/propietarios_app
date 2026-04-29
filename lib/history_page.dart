@@ -14,6 +14,7 @@ class _HistoryPageState extends State<HistoryPage> with SingleTickerProviderStat
   late TabController _tabController;
   final DataRepository _repository = DataRepository();
   int? _userId;
+  bool _isAdmin = false;
   
   List<dynamic> _myConsultations = [];
   List<dynamic> _othersConsultations = [];
@@ -38,6 +39,7 @@ class _HistoryPageState extends State<HistoryPage> with SingleTickerProviderStat
     
     final prefs = await SharedPreferences.getInstance();
     _userId = prefs.getInt('user_id');
+    _isAdmin = prefs.getBool('is_admin') ?? false;
 
     if (_userId != null) {
       try {
@@ -203,6 +205,14 @@ class _HistoryPageState extends State<HistoryPage> with SingleTickerProviderStat
         final date = _parseDateTime(item['created_at']);
         final formattedDate = DateFormat('dd/MM/yyyy hh:mm a').format(date);
 
+        // Privacy logic for the title: show location only if admin
+        String locationInfo = '';
+        if (_isAdmin) {
+          final tower = user['tower'] ?? 'N/A';
+          final apt = user['apartment'] ?? 'N/A';
+          locationInfo = ' (T$tower - A$apt)';
+        }
+
         return Card(
           elevation: 2,
           margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -217,7 +227,7 @@ class _HistoryPageState extends State<HistoryPage> with SingleTickerProviderStat
               child: const Icon(Icons.visibility, color: Colors.orange, size: 24),
             ),
             title: Text(
-              'Consultado por: ${user['name']}',
+              'Consultado por: ${user['name']}$locationInfo',
               style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF1A237E), fontSize: 16),
             ),
             subtitle: Column(
@@ -264,7 +274,7 @@ class _HistoryPageState extends State<HistoryPage> with SingleTickerProviderStat
           children: [
             Text('Nombre: ${user['name']}'),
             Text('Torre: ${user['tower'] ?? 'N/A'}'),
-            Text('Apto: ${user['apartment'] ?? 'N/A'}'),
+            Text('Apto: ${_isAdmin ? (user['apartment'] ?? 'N/A') : 'Privado'}'),
             Text('Teléfono: ${user['phone'] ?? 'N/A'}'),
           ],
         ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'database_helper.dart';
 import 'api_service.dart';
 import 'data_repository.dart';
@@ -19,6 +20,20 @@ class _SearchPageState extends State<SearchPage> {
   Map<String, dynamic>? _result;
   bool _searched = false;
   bool _isLoading = false;
+  bool _isAdmin = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkAdminStatus();
+  }
+
+  Future<void> _checkAdminStatus() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _isAdmin = prefs.getBool('is_admin') ?? false;
+    });
+  }
 
   void _search() async {
     if (_plateController.text.isEmpty) return;
@@ -134,9 +149,17 @@ class _SearchPageState extends State<SearchPage> {
     final bool hasWhatsapp = _result!['has_whatsapp'] == true || _result!['has_whatsapp'] == 1;
     final String contactName = _result!['contact_name'] ?? 'No disponible';
     final String contactPhone = _result!['contact_phone'] ?? '';
+    
+    // Privacy check for apartment/address
+    String ownerAddress = _result!['owner_address'] ?? 'Desconocido';
+    if (!_isAdmin) {
+      // Si no es admin, ocultamos el número de apartamento/ubicación exacta
+      ownerAddress = 'Privado';
+    }
+
     final String ownerInfo = _result!['owner_name'] != null 
-        ? '${_result!['owner_name']} (${_result!['owner_address']})'
-        : _result!['owner_address'] ?? 'Desconocido';
+        ? '${_result!['owner_name']} ($ownerAddress)'
+        : ownerAddress;
 
     return Card(
       elevation: 4,
