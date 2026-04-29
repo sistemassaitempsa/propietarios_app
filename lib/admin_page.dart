@@ -277,12 +277,13 @@ class _AdminPageState extends State<AdminPage> with SingleTickerProviderStateMix
         title: const Text('Panel de Administración'),
         bottom: TabBar(
           controller: _tabController,
+          labelColor: Colors.white,
+          unselectedLabelColor: Colors.white70,
+          indicatorColor: Colors.white,
           tabs: const [
             Tab(icon: Icon(Icons.people), text: 'Usuarios'),
             Tab(icon: Icon(Icons.business), text: 'Unidades'),
           ],
-          labelColor: Colors.white,
-          unselectedLabelColor: Colors.white70,
         ),
       ),
       body: TabBarView(

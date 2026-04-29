@@ -74,6 +74,9 @@ class _HistoryPageState extends State<HistoryPage> with SingleTickerProviderStat
         title: const Text('Historial de Consultas'),
         bottom: TabBar(
           controller: _tabController,
+          labelColor: Colors.white,
+          unselectedLabelColor: Colors.white70,
+          indicatorColor: Colors.white,
           tabs: const [
             Tab(text: 'Mis Consultas'),
             Tab(text: 'Consultas a mi Vehículo'),
