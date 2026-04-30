@@ -33,6 +33,7 @@ class _LoginPageState extends State<LoginPage> {
 
   bool _isLoading = false;
   bool _isLoadingUnits = false;
+  bool _isPressed = false;
   List<Map<String, dynamic>> _availableUnits = [];
   int? _selectedUnitId;
   bool _isAcceptedTerms = false;
@@ -501,44 +502,53 @@ class _LoginPageState extends State<LoginPage> {
                 const SizedBox(height: 32),
                 
                 // Primary Action Button
-                Container(
-                  width: double.infinity,
-                  height: 58,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(16),
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF3949AB), Color(0xFF1A237E)],
-                      begin: Alignment.centerLeft,
-                      end: Alignment.centerRight,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.indigo.withOpacity(0.3),
-                        blurRadius: 12,
-                        offset: const Offset(0, 6),
-                      ),
-                    ],
-                  ),
-                  child: ElevatedButton(
-                    onPressed: _isLoading ? null : (_isRegisterMode ? _register : _login),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.transparent,
-                      shadowColor: Colors.transparent,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                    ),
-                    child: _isLoading 
-                      ? const SizedBox(
-                          height: 24,
-                          width: 24,
-                          child: CircularProgressIndicator(
-                            color: Colors.white,
-                            strokeWidth: 3,
-                          ),
-                        )
-                      : Text(
-                          _isRegisterMode ? 'REGISTRARSE' : 'INICIAR SESIÓN', 
-                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white, letterSpacing: 1),
+                GestureDetector(
+                  onTapDown: (_) => setState(() => _isPressed = true),
+                  onTapUp: (_) => setState(() => _isPressed = false),
+                  onTapCancel: () => setState(() => _isPressed = false),
+                  child: AnimatedScale(
+                    scale: _isPressed ? 0.96 : 1.0,
+                    duration: const Duration(milliseconds: 100),
+                    child: Container(
+                      width: double.infinity,
+                      height: 58,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(16),
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF3949AB), Color(0xFF1A237E)],
+                          begin: Alignment.centerLeft,
+                          end: Alignment.centerRight,
                         ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.indigo.withOpacity(_isPressed ? 0.1 : 0.3),
+                            blurRadius: _isPressed ? 4 : 12,
+                            offset: Offset(0, _isPressed ? 2 : 6),
+                          ),
+                        ],
+                      ),
+                      child: ElevatedButton(
+                        onPressed: _isLoading ? null : (_isRegisterMode ? _register : _login),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.transparent,
+                          shadowColor: Colors.transparent,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        ),
+                        child: _isLoading 
+                          ? const SizedBox(
+                              height: 24,
+                              width: 24,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 3,
+                              ),
+                            )
+                          : Text(
+                              _isRegisterMode ? 'REGISTRARSE' : 'INICIAR SESIÓN', 
+                              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white, letterSpacing: 1),
+                            ),
+                      ),
+                    ),
                   ),
                 ),
                 
