@@ -26,6 +26,7 @@ class _AdminPageState extends State<AdminPage> with SingleTickerProviderStateMix
   List<dynamic> _units = [];
   bool _isLoadingUsers = true;
   bool _isLoadingUnits = true;
+  bool _isProcessing = false;
   final TextEditingController _unitSearchController = TextEditingController();
   final TextEditingController _userSearchController = TextEditingController();
   String _searchCriteria = 'Nombre'; // 'Nombre', 'Unidad', 'Placa'
@@ -97,46 +98,79 @@ class _AdminPageState extends State<AdminPage> with SingleTickerProviderStateMix
   }
 
   Future<void> _toggleUserHistory(int userId, bool currentStatus) async {
-    final success = await _apiService.toggleUserHistory(userId, !currentStatus);
-    if (success) {
-      _fetchUsers();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Estado de historial actualizado para el usuario')),
-      );
+    if (_isProcessing) return;
+    setState(() => _isProcessing = true);
+    try {
+      final success = await _apiService.toggleUserHistory(userId, !currentStatus);
+      if (success) {
+        _fetchUsers();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Estado de historial actualizado para el usuario')),
+          );
+        }
+      }
+    } finally {
+      if (mounted) setState(() => _isProcessing = false);
     }
   }
 
   Future<void> _toggleUserActive(int userId, bool currentStatus) async {
-    final success = await _apiService.toggleUserActive(userId, !currentStatus);
-    if (success) {
-      _fetchUsers();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Usuario ${!currentStatus ? 'habilitado' : 'inhabilitado'} exitosamente')),
-      );
+    if (_isProcessing) return;
+    setState(() => _isProcessing = true);
+    try {
+      final success = await _apiService.toggleUserActive(userId, !currentStatus);
+      if (success) {
+        _fetchUsers();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Usuario ${!currentStatus ? 'habilitado' : 'inhabilitado'} exitosamente')),
+          );
+        }
+      }
+    } finally {
+      if (mounted) setState(() => _isProcessing = false);
     }
   }
 
   Future<void> _toggleUnitHistory(int unitId, bool currentStatus) async {
-    final success = await _apiService.toggleUnitHistory(unitId, !currentStatus);
-    if (success) {
-      _fetchUnits();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Estado de historial actualizado para la unidad')),
-      );
+    if (_isProcessing) return;
+    setState(() => _isProcessing = true);
+    try {
+      final success = await _apiService.toggleUnitHistory(unitId, !currentStatus);
+      if (success) {
+        _fetchUnits();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Estado de historial actualizado para la unidad')),
+          );
+        }
+      }
+    } finally {
+      if (mounted) setState(() => _isProcessing = false);
     }
   }
 
   Future<void> _toggleUnitActive(int unitId, bool currentStatus) async {
-    final success = await _apiService.toggleUnitActive(unitId, !currentStatus);
-    if (success) {
-      _fetchUnits();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Unidad ${!currentStatus ? 'habilitada' : 'inhabilitada'} exitosamente')),
-      );
+    if (_isProcessing) return;
+    setState(() => _isProcessing = true);
+    try {
+      final success = await _apiService.toggleUnitActive(unitId, !currentStatus);
+      if (success) {
+        _fetchUnits();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Unidad ${!currentStatus ? 'habilitada' : 'inhabilitada'} exitosamente')),
+          );
+        }
+      }
+    } finally {
+      if (mounted) setState(() => _isProcessing = false);
     }
   }
 
   Future<void> _deleteUnit(int unitId, String unitName) async {
+    if (_isProcessing) return;
     // Confirmación
     final confirm = await showDialog<bool>(
       context: context,
@@ -151,16 +185,25 @@ class _AdminPageState extends State<AdminPage> with SingleTickerProviderStateMix
     );
 
     if (confirm == true) {
-      final error = await _apiService.deleteUnit(unitId);
-      if (error == null) {
-        _fetchUnits();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Unidad eliminada exitosamente')),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(error), backgroundColor: Colors.red),
-        );
+      setState(() => _isProcessing = true);
+      try {
+        final error = await _apiService.deleteUnit(unitId);
+        if (error == null) {
+          _fetchUnits();
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Unidad eliminada exitosamente')),
+            );
+          }
+        } else {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(error), backgroundColor: Colors.red),
+            );
+          }
+        }
+      } finally {
+        if (mounted) setState(() => _isProcessing = false);
       }
     }
   }
@@ -172,71 +215,87 @@ class _AdminPageState extends State<AdminPage> with SingleTickerProviderStateMix
 
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          title: const Text('Agregar Nueva Unidad'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: nameController,
-                  decoration: const InputDecoration(labelText: 'Nombre de la Unidad (ej: Conjunto A)'),
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: codeController,
-                  decoration: InputDecoration(
-                    labelText: 'Código Único',
-                    suffixIcon: IconButton(
-                      icon: const Icon(Icons.refresh),
-                      onPressed: () {
-                        setDialogState(() {
-                          codeController.text = _generateRandomCode(6);
-                        });
-                      },
-                      tooltip: 'Generar nuevo código',
+        builder: (context, setDialogState) {
+          bool isDialogProcessing = false;
+          return AlertDialog(
+            title: const Text('Agregar Nueva Unidad'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: nameController,
+                    decoration: const InputDecoration(labelText: 'Nombre de la Unidad (ej: Conjunto A)'),
+                    enabled: !isDialogProcessing,
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: codeController,
+                    enabled: !isDialogProcessing,
+                    decoration: InputDecoration(
+                      labelText: 'Código Único',
+                      suffixIcon: IconButton(
+                        icon: const Icon(Icons.refresh),
+                        onPressed: isDialogProcessing ? null : () {
+                          setDialogState(() {
+                            codeController.text = _generateRandomCode(6);
+                          });
+                        },
+                        tooltip: 'Generar nuevo código',
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: descController,
-                  decoration: const InputDecoration(labelText: 'Descripción (opcional)'),
-                ),
-              ],
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: descController,
+                    decoration: const InputDecoration(labelText: 'Descripción (opcional)'),
+                    enabled: !isDialogProcessing,
+                  ),
+                ],
+              ),
             ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancelar'),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                if (nameController.text.isNotEmpty && codeController.text.isNotEmpty) {
-                  final result = await _apiService.addUnit({
-                    'name': nameController.text,
-                    'description': descController.text,
-                    'code': codeController.text,
-                  });
-                  if (result != null) {
-                    Navigator.pop(context);
-                    _fetchUnits();
+            actions: [
+              TextButton(
+                onPressed: isDialogProcessing ? null : () => Navigator.pop(context),
+                child: const Text('Cancelar'),
+              ),
+              ElevatedButton(
+                onPressed: isDialogProcessing ? null : () async {
+                  if (nameController.text.isNotEmpty && codeController.text.isNotEmpty) {
+                    setDialogState(() => isDialogProcessing = true);
+                    try {
+                      final result = await _apiService.addUnit({
+                        'name': nameController.text,
+                        'description': descController.text,
+                        'code': codeController.text,
+                      });
+                      if (result != null) {
+                        if (mounted) Navigator.pop(context);
+                        _fetchUnits();
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Unidad creada exitosamente')),
+                          );
+                        }
+                      }
+                    } finally {
+                      setDialogState(() => isDialogProcessing = false);
+                    }
+                  } else {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Unidad creada exitosamente')),
+                      const SnackBar(content: Text('El nombre y el código son obligatorios')),
                     );
                   }
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('El nombre y el código son obligatorios')),
-                  );
-                }
-              },
-              child: const Text('Guardar'),
-            ),
-          ],
-        ),
+                },
+                child: isDialogProcessing 
+                  ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                  : const Text('Guardar'),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -248,71 +307,87 @@ class _AdminPageState extends State<AdminPage> with SingleTickerProviderStateMix
 
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          title: const Text('Editar Unidad'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: nameController,
-                  decoration: const InputDecoration(labelText: 'Nombre de la Unidad'),
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: codeController,
-                  decoration: InputDecoration(
-                    labelText: 'Código Único',
-                    suffixIcon: IconButton(
-                      icon: const Icon(Icons.refresh),
-                      onPressed: () {
-                        setDialogState(() {
-                          codeController.text = _generateRandomCode(6);
-                        });
-                      },
-                      tooltip: 'Generar nuevo código',
+        builder: (context, setDialogState) {
+          bool isDialogProcessing = false;
+          return AlertDialog(
+            title: const Text('Editar Unidad'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: nameController,
+                    decoration: const InputDecoration(labelText: 'Nombre de la Unidad'),
+                    enabled: !isDialogProcessing,
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: codeController,
+                    enabled: !isDialogProcessing,
+                    decoration: InputDecoration(
+                      labelText: 'Código Único',
+                      suffixIcon: IconButton(
+                        icon: const Icon(Icons.refresh),
+                        onPressed: isDialogProcessing ? null : () {
+                          setDialogState(() {
+                            codeController.text = _generateRandomCode(6);
+                          });
+                        },
+                        tooltip: 'Generar nuevo código',
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: descController,
-                  decoration: const InputDecoration(labelText: 'Descripción'),
-                ),
-              ],
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: descController,
+                    decoration: const InputDecoration(labelText: 'Descripción'),
+                    enabled: !isDialogProcessing,
+                  ),
+                ],
+              ),
             ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancelar'),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                if (nameController.text.isNotEmpty && codeController.text.isNotEmpty) {
-                  final result = await _apiService.updateUnit(unit['id'], {
-                    'name': nameController.text,
-                    'description': descController.text,
-                    'code': codeController.text,
-                  });
-                  if (result != null) {
-                    Navigator.pop(context);
-                    _fetchUnits();
+            actions: [
+              TextButton(
+                onPressed: isDialogProcessing ? null : () => Navigator.pop(context),
+                child: const Text('Cancelar'),
+              ),
+              ElevatedButton(
+                onPressed: isDialogProcessing ? null : () async {
+                  if (nameController.text.isNotEmpty && codeController.text.isNotEmpty) {
+                    setDialogState(() => isDialogProcessing = true);
+                    try {
+                      final result = await _apiService.updateUnit(unit['id'], {
+                        'name': nameController.text,
+                        'description': descController.text,
+                        'code': codeController.text,
+                      });
+                      if (result != null) {
+                        if (mounted) Navigator.pop(context);
+                        _fetchUnits();
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Unidad actualizada exitosamente')),
+                          );
+                        }
+                      }
+                    } finally {
+                      setDialogState(() => isDialogProcessing = false);
+                    }
+                  } else {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Unidad actualizada exitosamente')),
+                      const SnackBar(content: Text('El nombre y el código son obligatorios')),
                     );
                   }
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('El nombre y el código son obligatorios')),
-                  );
-                }
-              },
-              child: const Text('Guardar'),
-            ),
-          ],
-        ),
+                },
+                child: isDialogProcessing 
+                  ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                  : const Text('Guardar'),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -342,7 +417,7 @@ class _AdminPageState extends State<AdminPage> with SingleTickerProviderStateMix
       ),
       floatingActionButton: _tabController.index == 1 
         ? FloatingActionButton(
-            onPressed: _showAddUnitDialog,
+            onPressed: _isProcessing ? null : _showAddUnitDialog,
             child: const Icon(Icons.add),
             tooltip: 'Agregar Unidad',
           )
@@ -371,7 +446,7 @@ class _AdminPageState extends State<AdminPage> with SingleTickerProviderStateMix
                             child: Text(label, style: const TextStyle(fontSize: 14)),
                           ))
                       .toList(),
-                  onChanged: (value) {
+                  onChanged: _isProcessing ? null : (value) {
                     setState(() {
                       _searchCriteria = value!;
                       _userSearchController.clear();
@@ -385,6 +460,7 @@ class _AdminPageState extends State<AdminPage> with SingleTickerProviderStateMix
                 flex: 3,
                 child: TextField(
                   controller: _userSearchController,
+                  enabled: !_isProcessing,
                   decoration: InputDecoration(
                     hintText: 'Buscar...',
                     prefixIcon: const Icon(Icons.search),
@@ -466,7 +542,7 @@ class _AdminPageState extends State<AdminPage> with SingleTickerProviderStateMix
                                               child: Switch(
                                                 value: isActive,
                                                 activeColor: Colors.green,
-                                                onChanged: (value) => _toggleUserActive(user['id'], isActive),
+                                                onChanged: _isProcessing ? null : (value) => _toggleUserActive(user['id'], isActive),
                                               ),
                                             ),
                                           ],
@@ -481,7 +557,7 @@ class _AdminPageState extends State<AdminPage> with SingleTickerProviderStateMix
                                               scale: 0.8,
                                               child: Switch(
                                                 value: isHistoryEnabled,
-                                                onChanged: (value) => _toggleUserHistory(user['id'], isHistoryEnabled),
+                                                onChanged: _isProcessing ? null : (value) => _toggleUserHistory(user['id'], isHistoryEnabled),
                                               ),
                                             ),
                                           ],
@@ -547,6 +623,7 @@ class _AdminPageState extends State<AdminPage> with SingleTickerProviderStateMix
           padding: const EdgeInsets.all(8.0),
           child: TextField(
             controller: _unitSearchController,
+            enabled: !_isProcessing,
             decoration: InputDecoration(
               hintText: 'Buscar unidad...',
               prefixIcon: const Icon(Icons.search),
@@ -612,7 +689,7 @@ class _AdminPageState extends State<AdminPage> with SingleTickerProviderStateMix
                                               ),
                                               const SizedBox(width: 4),
                                               InkWell(
-                                                onTap: () {
+                                                onTap: _isProcessing ? null : () {
                                                   Clipboard.setData(ClipboardData(text: unit['code']));
                                                   ScaffoldMessenger.of(context).showSnackBar(
                                                     SnackBar(content: Text('Código ${unit['code']} copiado')),
@@ -631,14 +708,14 @@ class _AdminPageState extends State<AdminPage> with SingleTickerProviderStateMix
                                     children: [
                                       IconButton(
                                         icon: const Icon(Icons.edit, color: Colors.blue),
-                                        onPressed: () => _showEditUnitDialog(unit),
+                                        onPressed: _isProcessing ? null : () => _showEditUnitDialog(unit),
                                         tooltip: 'Editar',
                                       ),
                                       IconButton(
                                         icon: const Icon(Icons.delete_outline, color: Colors.red),
-                                        onPressed: userCount == 0 
+                                        onPressed: (userCount == 0 && !_isProcessing)
                                           ? () => _deleteUnit(unit['id'], unit['name'])
-                                          : null, // Deshabilitado si tiene propietarios
+                                          : null, // Deshabilitado si tiene propietarios o está procesando
                                         tooltip: userCount == 0 ? 'Eliminar' : 'No se puede eliminar (tiene propietarios)',
                                       ),
                                     ],
@@ -658,7 +735,7 @@ class _AdminPageState extends State<AdminPage> with SingleTickerProviderStateMix
                                           Switch(
                                             value: isActive,
                                             activeColor: Colors.green,
-                                            onChanged: (value) => _toggleUnitActive(unit['id'], isActive),
+                                            onChanged: _isProcessing ? null : (value) => _toggleUnitActive(unit['id'], isActive),
                                           ),
                                         ],
                                       ),
@@ -667,7 +744,7 @@ class _AdminPageState extends State<AdminPage> with SingleTickerProviderStateMix
                                           const Text('Historial: ', style: TextStyle(fontSize: 12)),
                                           Switch(
                                             value: isHistoryEnabled,
-                                            onChanged: (value) => _toggleUnitHistory(unit['id'], isHistoryEnabled),
+                                            onChanged: _isProcessing ? null : (value) => _toggleUnitHistory(unit['id'], isHistoryEnabled),
                                           ),
                                         ],
                                       ),

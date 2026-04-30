@@ -12,6 +12,7 @@ class _ResidentsPageState extends State<ResidentsPage> {
   final ApiService _apiService = ApiService();
   List<dynamic> _residents = [];
   bool _isLoading = true;
+  bool _isProcessing = false;
 
   @override
   void initState() {
@@ -66,6 +67,7 @@ class _ResidentsPageState extends State<ResidentsPage> {
   }
 
   Future<void> _reportResident(Map<String, dynamic> resident) async {
+    if (_isProcessing) return;
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -83,19 +85,25 @@ class _ResidentsPageState extends State<ResidentsPage> {
     );
 
     if (confirm == true) {
-      final success = await _apiService.reportUser(resident['id']);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(success ? 'Reporte enviado con éxito' : 'Error al enviar el reporte'),
-            backgroundColor: success ? Colors.green : Colors.red,
-          ),
-        );
+      setState(() => _isProcessing = true);
+      try {
+        final success = await _apiService.reportUser(resident['id']);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(success ? 'Reporte enviado con éxito' : 'Error al enviar el reporte'),
+              backgroundColor: success ? Colors.green : Colors.red,
+            ),
+          );
+        }
+      } finally {
+        if (mounted) setState(() => _isProcessing = false);
       }
     }
   }
 
   Future<void> _activateResident(Map<String, dynamic> resident) async {
+    if (_isProcessing) return;
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -113,15 +121,20 @@ class _ResidentsPageState extends State<ResidentsPage> {
     );
 
     if (confirm == true) {
-      final success = await _apiService.activateUser(resident['id']);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(success ? 'Cuenta activada correctamente' : 'Error al activar la cuenta'),
-            backgroundColor: success ? Colors.green : Colors.red,
-          ),
-        );
-        if (success) _loadResidents();
+      setState(() => _isProcessing = true);
+      try {
+        final success = await _apiService.activateUser(resident['id']);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(success ? 'Cuenta activada correctamente' : 'Error al activar la cuenta'),
+              backgroundColor: success ? Colors.green : Colors.red,
+            ),
+          );
+          if (success) _loadResidents();
+        }
+      } finally {
+        if (mounted) setState(() => _isProcessing = false);
       }
     }
   }
@@ -196,12 +209,12 @@ class _ResidentsPageState extends State<ResidentsPage> {
               if (!isActive)
                 IconButton(
                   icon: const Icon(Icons.check_circle_outline, color: Colors.green),
-                  onPressed: () => _activateResident(resident),
+                  onPressed: _isProcessing ? null : () => _activateResident(resident),
                   tooltip: 'Activar cuenta',
                 ),
               IconButton(
                 icon: const Icon(Icons.report_gmailerrorred_rounded, color: Colors.redAccent),
-                onPressed: () => _reportResident(resident),
+                onPressed: _isProcessing ? null : () => _reportResident(resident),
                 tooltip: 'Reportar cuenta',
               ),
             ],
