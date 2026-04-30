@@ -31,6 +31,7 @@ class _LoginPageState extends State<LoginPage> {
   final ApiService _apiService = ApiService();
   final DataRepository _repository = DataRepository();
 
+  bool _isLoading = false;
   bool _isLoadingUnits = false;
   List<Map<String, dynamic>> _availableUnits = [];
   int? _selectedUnitId;
@@ -128,6 +129,8 @@ class _LoginPageState extends State<LoginPage> {
       return;
     }
 
+    setState(() => _isLoading = true);
+
     try {
       final response = await _repository.login(email, password);
       if (response != null) {
@@ -143,6 +146,10 @@ class _LoginPageState extends State<LoginPage> {
         _showInactiveAccountDialog();
       } else {
         _showMsg('Error al iniciar sesión: $e');
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
       }
     }
   }
@@ -189,36 +196,45 @@ class _LoginPageState extends State<LoginPage> {
       return;
     }
 
-    setState(() => _isLoadingUnits = true);
-    final unit = await _apiService.findUnitByCode(unitCode);
-    setState(() => _isLoadingUnits = false);
+    setState(() => _isLoading = true);
 
-    if (unit == null) {
-      _showMsg('El código de unidad no es válido');
-      return;
-    }
+    try {
+      final unit = await _apiService.findUnitByCode(unitCode);
 
-    // Preparar datos para la API (necesita 'name') y local
-    Map<String, dynamic> userData = {
-      'name': '$firstName $lastName',
-      'firstName': firstName,
-      'lastName': lastName,
-      'phone': _phoneController.text,
-      'tower': _towerController.text,
-      'apartment': _apartmentController.text,
-      'unit_id': unit['id'],
-    };
+      if (unit == null) {
+        _showMsg('El código de unidad no es válido');
+        setState(() => _isLoading = false);
+        return;
+      }
 
-    bool success = await _repository.register(email, password, userData);
+      // Preparar datos para la API (necesita 'name') y local
+      Map<String, dynamic> userData = {
+        'name': '$firstName $lastName',
+        'firstName': firstName,
+        'lastName': lastName,
+        'phone': _phoneController.text,
+        'tower': _towerController.text,
+        'apartment': _apartmentController.text,
+        'unit_id': unit['id'],
+      };
 
-    if (success) {
-      _showMsg('Usuario registrado con éxito en el servidor');
-      setState(() {
-        _isRegisterMode = false;
-        _isAcceptedTerms = false; // Reset for next time
-      });
-    } else {
-      _showMsg('Error al registrar usuario. Posiblemente el correo ya existe o falla de conexión.');
+      bool success = await _repository.register(email, password, userData);
+
+      if (success) {
+        _showMsg('Usuario registrado con éxito en el servidor');
+        setState(() {
+          _isRegisterMode = false;
+          _isAcceptedTerms = false; // Reset for next time
+        });
+      } else {
+        _showMsg('Error al registrar usuario. Posiblemente el correo ya existe o falla de conexión.');
+      }
+    } catch (e) {
+      _showMsg('Error al registrar: $e');
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
@@ -504,16 +520,25 @@ class _LoginPageState extends State<LoginPage> {
                     ],
                   ),
                   child: ElevatedButton(
-                    onPressed: _isRegisterMode ? _register : _login,
+                    onPressed: _isLoading ? null : (_isRegisterMode ? _register : _login),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.transparent,
                       shadowColor: Colors.transparent,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                     ),
-                    child: Text(
-                      _isRegisterMode ? 'REGISTRARSE' : 'INICIAR SESIÓN', 
-                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white, letterSpacing: 1),
-                    ),
+                    child: _isLoading 
+                      ? const SizedBox(
+                          height: 24,
+                          width: 24,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 3,
+                          ),
+                        )
+                      : Text(
+                          _isRegisterMode ? 'REGISTRARSE' : 'INICIAR SESIÓN', 
+                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white, letterSpacing: 1),
+                        ),
                   ),
                 ),
                 
