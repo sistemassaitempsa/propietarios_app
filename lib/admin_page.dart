@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'dart:math';
 import 'api_service.dart';
 
 class AdminPage extends StatefulWidget {
@@ -11,11 +13,20 @@ class AdminPage extends StatefulWidget {
 class _AdminPageState extends State<AdminPage> with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final ApiService _apiService = ApiService();
-  
+
+  String _generateRandomCode(int length) {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    final random = Random();
+    return String.fromCharCodes(Iterable.generate(
+      length, (_) => chars.codeUnitAt(random.nextInt(chars.length)),
+    ));
+  }
+
   List<dynamic> _users = [];
   List<dynamic> _units = [];
   bool _isLoadingUsers = true;
   bool _isLoadingUnits = true;
+  bool _isProcessing = false;
   final TextEditingController _unitSearchController = TextEditingController();
   final TextEditingController _userSearchController = TextEditingController();
   String _searchCriteria = 'Nombre'; // 'Nombre', 'Unidad', 'Placa'
@@ -87,46 +98,79 @@ class _AdminPageState extends State<AdminPage> with SingleTickerProviderStateMix
   }
 
   Future<void> _toggleUserHistory(int userId, bool currentStatus) async {
-    final success = await _apiService.toggleUserHistory(userId, !currentStatus);
-    if (success) {
-      _fetchUsers();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Estado de historial actualizado para el usuario')),
-      );
+    if (_isProcessing) return;
+    setState(() => _isProcessing = true);
+    try {
+      final success = await _apiService.toggleUserHistory(userId, !currentStatus);
+      if (success) {
+        _fetchUsers();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Estado de historial actualizado para el usuario')),
+          );
+        }
+      }
+    } finally {
+      if (mounted) setState(() => _isProcessing = false);
     }
   }
 
   Future<void> _toggleUserActive(int userId, bool currentStatus) async {
-    final success = await _apiService.toggleUserActive(userId, !currentStatus);
-    if (success) {
-      _fetchUsers();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Usuario ${!currentStatus ? 'habilitado' : 'inhabilitado'} exitosamente')),
-      );
+    if (_isProcessing) return;
+    setState(() => _isProcessing = true);
+    try {
+      final success = await _apiService.toggleUserActive(userId, !currentStatus);
+      if (success) {
+        _fetchUsers();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Usuario ${!currentStatus ? 'habilitado' : 'inhabilitado'} exitosamente')),
+          );
+        }
+      }
+    } finally {
+      if (mounted) setState(() => _isProcessing = false);
     }
   }
 
   Future<void> _toggleUnitHistory(int unitId, bool currentStatus) async {
-    final success = await _apiService.toggleUnitHistory(unitId, !currentStatus);
-    if (success) {
-      _fetchUnits();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Estado de historial actualizado para la unidad')),
-      );
+    if (_isProcessing) return;
+    setState(() => _isProcessing = true);
+    try {
+      final success = await _apiService.toggleUnitHistory(unitId, !currentStatus);
+      if (success) {
+        _fetchUnits();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Estado de historial actualizado para la unidad')),
+          );
+        }
+      }
+    } finally {
+      if (mounted) setState(() => _isProcessing = false);
     }
   }
 
   Future<void> _toggleUnitActive(int unitId, bool currentStatus) async {
-    final success = await _apiService.toggleUnitActive(unitId, !currentStatus);
-    if (success) {
-      _fetchUnits();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Unidad ${!currentStatus ? 'habilitada' : 'inhabilitada'} exitosamente')),
-      );
+    if (_isProcessing) return;
+    setState(() => _isProcessing = true);
+    try {
+      final success = await _apiService.toggleUnitActive(unitId, !currentStatus);
+      if (success) {
+        _fetchUnits();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Unidad ${!currentStatus ? 'habilitada' : 'inhabilitada'} exitosamente')),
+          );
+        }
+      }
+    } finally {
+      if (mounted) setState(() => _isProcessing = false);
     }
   }
 
   Future<void> _deleteUnit(int unitId, String unitName) async {
+    if (_isProcessing) return;
     // Confirmación
     final confirm = await showDialog<bool>(
       context: context,
@@ -141,16 +185,25 @@ class _AdminPageState extends State<AdminPage> with SingleTickerProviderStateMix
     );
 
     if (confirm == true) {
-      final error = await _apiService.deleteUnit(unitId);
-      if (error == null) {
-        _fetchUnits();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Unidad eliminada exitosamente')),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(error), backgroundColor: Colors.red),
-        );
+      setState(() => _isProcessing = true);
+      try {
+        final error = await _apiService.deleteUnit(unitId);
+        if (error == null) {
+          _fetchUnits();
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Unidad eliminada exitosamente')),
+            );
+          }
+        } else {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(error), backgroundColor: Colors.red),
+            );
+          }
+        }
+      } finally {
+        if (mounted) setState(() => _isProcessing = false);
       }
     }
   }
@@ -158,97 +211,183 @@ class _AdminPageState extends State<AdminPage> with SingleTickerProviderStateMix
   void _showAddUnitDialog() {
     final nameController = TextEditingController();
     final descController = TextEditingController();
+    final codeController = TextEditingController(text: _generateRandomCode(6));
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Agregar Nueva Unidad'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: nameController,
-              decoration: const InputDecoration(labelText: 'Nombre de la Unidad (ej: Conjunto A)'),
+      barrierDismissible: false,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          bool isDialogProcessing = false;
+          return AlertDialog(
+            title: const Text('Agregar Nueva Unidad'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: nameController,
+                    decoration: const InputDecoration(labelText: 'Nombre de la Unidad (ej: Conjunto A)'),
+                    enabled: !isDialogProcessing,
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: codeController,
+                    enabled: !isDialogProcessing,
+                    decoration: InputDecoration(
+                      labelText: 'Código Único',
+                      suffixIcon: IconButton(
+                        icon: const Icon(Icons.refresh),
+                        onPressed: isDialogProcessing ? null : () {
+                          setDialogState(() {
+                            codeController.text = _generateRandomCode(6);
+                          });
+                        },
+                        tooltip: 'Generar nuevo código',
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: descController,
+                    decoration: const InputDecoration(labelText: 'Descripción (opcional)'),
+                    enabled: !isDialogProcessing,
+                  ),
+                ],
+              ),
             ),
-            TextField(
-              controller: descController,
-              decoration: const InputDecoration(labelText: 'Descripción (opcional)'),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancelar'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              if (nameController.text.isNotEmpty) {
-                final result = await _apiService.addUnit({
-                  'name': nameController.text,
-                  'description': descController.text,
-                });
-                if (result != null) {
-                  Navigator.pop(context);
-                  _fetchUnits();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Unidad creada exitosamente')),
-                  );
-                }
-              }
-            },
-            child: const Text('Guardar'),
-          ),
-        ],
+            actions: [
+              TextButton(
+                onPressed: isDialogProcessing ? null : () => Navigator.pop(context),
+                child: const Text('Cancelar'),
+              ),
+              ElevatedButton(
+                onPressed: isDialogProcessing ? null : () async {
+                  if (nameController.text.isNotEmpty && codeController.text.isNotEmpty) {
+                    setDialogState(() => isDialogProcessing = true);
+                    try {
+                      final result = await _apiService.addUnit({
+                        'name': nameController.text,
+                        'description': descController.text,
+                        'code': codeController.text,
+                      });
+                      if (result != null) {
+                        if (mounted) Navigator.pop(context);
+                        _fetchUnits();
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Unidad creada exitosamente')),
+                          );
+                        }
+                      }
+                    } finally {
+                      setDialogState(() => isDialogProcessing = false);
+                    }
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('El nombre y el código son obligatorios')),
+                    );
+                  }
+                },
+                child: isDialogProcessing 
+                  ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                  : const Text('Guardar'),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
 
   void _showEditUnitDialog(dynamic unit) {
     final nameController = TextEditingController(text: unit['name']);
+    final codeController = TextEditingController(text: unit['code'] ?? '');
     final descController = TextEditingController(text: unit['description'] ?? '');
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Editar Unidad'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: nameController,
-              decoration: const InputDecoration(labelText: 'Nombre de la Unidad'),
+      barrierDismissible: false,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          bool isDialogProcessing = false;
+          return AlertDialog(
+            title: const Text('Editar Unidad'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: nameController,
+                    decoration: const InputDecoration(labelText: 'Nombre de la Unidad'),
+                    enabled: !isDialogProcessing,
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: codeController,
+                    enabled: !isDialogProcessing,
+                    decoration: InputDecoration(
+                      labelText: 'Código Único',
+                      suffixIcon: IconButton(
+                        icon: const Icon(Icons.refresh),
+                        onPressed: isDialogProcessing ? null : () {
+                          setDialogState(() {
+                            codeController.text = _generateRandomCode(6);
+                          });
+                        },
+                        tooltip: 'Generar nuevo código',
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: descController,
+                    decoration: const InputDecoration(labelText: 'Descripción'),
+                    enabled: !isDialogProcessing,
+                  ),
+                ],
+              ),
             ),
-            TextField(
-              controller: descController,
-              decoration: const InputDecoration(labelText: 'Descripción'),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancelar'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              if (nameController.text.isNotEmpty) {
-                final result = await _apiService.updateUnit(unit['id'], {
-                  'name': nameController.text,
-                  'description': descController.text,
-                });
-                if (result != null) {
-                  Navigator.pop(context);
-                  _fetchUnits();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Unidad actualizada exitosamente')),
-                  );
-                }
-              }
-            },
-            child: const Text('Guardar'),
-          ),
-        ],
+            actions: [
+              TextButton(
+                onPressed: isDialogProcessing ? null : () => Navigator.pop(context),
+                child: const Text('Cancelar'),
+              ),
+              ElevatedButton(
+                onPressed: isDialogProcessing ? null : () async {
+                  if (nameController.text.isNotEmpty && codeController.text.isNotEmpty) {
+                    setDialogState(() => isDialogProcessing = true);
+                    try {
+                      final result = await _apiService.updateUnit(unit['id'], {
+                        'name': nameController.text,
+                        'description': descController.text,
+                        'code': codeController.text,
+                      });
+                      if (result != null) {
+                        if (mounted) Navigator.pop(context);
+                        _fetchUnits();
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Unidad actualizada exitosamente')),
+                          );
+                        }
+                      }
+                    } finally {
+                      setDialogState(() => isDialogProcessing = false);
+                    }
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('El nombre y el código son obligatorios')),
+                    );
+                  }
+                },
+                child: isDialogProcessing 
+                  ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                  : const Text('Guardar'),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -260,12 +399,13 @@ class _AdminPageState extends State<AdminPage> with SingleTickerProviderStateMix
         title: const Text('Panel de Administración'),
         bottom: TabBar(
           controller: _tabController,
+          labelColor: Colors.white,
+          unselectedLabelColor: Colors.white70,
+          indicatorColor: Colors.white,
           tabs: const [
             Tab(icon: Icon(Icons.people), text: 'Usuarios'),
             Tab(icon: Icon(Icons.business), text: 'Unidades'),
           ],
-          labelColor: Colors.white,
-          unselectedLabelColor: Colors.white70,
         ),
       ),
       body: TabBarView(
@@ -277,7 +417,7 @@ class _AdminPageState extends State<AdminPage> with SingleTickerProviderStateMix
       ),
       floatingActionButton: _tabController.index == 1 
         ? FloatingActionButton(
-            onPressed: _showAddUnitDialog,
+            onPressed: _isProcessing ? null : _showAddUnitDialog,
             child: const Icon(Icons.add),
             tooltip: 'Agregar Unidad',
           )
@@ -296,10 +436,9 @@ class _AdminPageState extends State<AdminPage> with SingleTickerProviderStateMix
                 flex: 2,
                 child: DropdownButtonFormField<String>(
                   value: _searchCriteria,
-                  decoration: InputDecoration(
+                  decoration: const InputDecoration(
                     labelText: 'Filtrar por',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 10),
+                    contentPadding: EdgeInsets.symmetric(horizontal: 10),
                   ),
                   items: ['Nombre', 'Unidad', 'Placa']
                       .map((label) => DropdownMenuItem(
@@ -307,7 +446,7 @@ class _AdminPageState extends State<AdminPage> with SingleTickerProviderStateMix
                             child: Text(label, style: const TextStyle(fontSize: 14)),
                           ))
                       .toList(),
-                  onChanged: (value) {
+                  onChanged: _isProcessing ? null : (value) {
                     setState(() {
                       _searchCriteria = value!;
                       _userSearchController.clear();
@@ -321,10 +460,10 @@ class _AdminPageState extends State<AdminPage> with SingleTickerProviderStateMix
                 flex: 3,
                 child: TextField(
                   controller: _userSearchController,
+                  enabled: !_isProcessing,
                   decoration: InputDecoration(
                     hintText: 'Buscar...',
                     prefixIcon: const Icon(Icons.search),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                     suffixIcon: _userSearchController.text.isNotEmpty
                         ? IconButton(
                             icon: const Icon(Icons.clear),
@@ -352,7 +491,8 @@ class _AdminPageState extends State<AdminPage> with SingleTickerProviderStateMix
                         final bool isHistoryEnabled = user['history_enabled'] == true || user['history_enabled'] == 1;
                         final bool isActive = user['active'] == true || user['active'] == 1;
                         final List<dynamic> vehicles = user['vehicles'] ?? [];
-                        final List<dynamic> contacts = user['emergencyContacts'] ?? [];
+                        // En Laravel con camelCase por defecto para relaciones
+                        final List<dynamic> contacts = user['emergency_contacts'] ?? user['emergencyContacts'] ?? [];
 
                         return Card(
                           margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
@@ -375,8 +515,8 @@ class _AdminPageState extends State<AdminPage> with SingleTickerProviderStateMix
                                 ),
                               ],
                             ),
-                            title: Text('${user['firstName']} ${user['lastName']}'),
-                            subtitle: Text('Unidad: ${user['unit']?['name'] ?? 'N/A'} - Apt: ${user['apartment']}'),
+                            title: Text('${user['firstName'] ?? ''} ${user['lastName'] ?? ''}'.trim().isEmpty ? (user['name'] ?? 'Usuario') : '${user['firstName'] ?? ''} ${user['lastName'] ?? ''}'),
+                            subtitle: Text('Unidad: ${user['unit']?['name'] ?? 'N/A'} - Apt: ${user['apartment'] ?? 'N/A'}'),
                             children: [
                               const Divider(),
                               Padding(
@@ -402,7 +542,7 @@ class _AdminPageState extends State<AdminPage> with SingleTickerProviderStateMix
                                               child: Switch(
                                                 value: isActive,
                                                 activeColor: Colors.green,
-                                                onChanged: (value) => _toggleUserActive(user['id'], isActive),
+                                                onChanged: _isProcessing ? null : (value) => _toggleUserActive(user['id'], isActive),
                                               ),
                                             ),
                                           ],
@@ -417,7 +557,7 @@ class _AdminPageState extends State<AdminPage> with SingleTickerProviderStateMix
                                               scale: 0.8,
                                               child: Switch(
                                                 value: isHistoryEnabled,
-                                                onChanged: (value) => _toggleUserHistory(user['id'], isHistoryEnabled),
+                                                onChanged: _isProcessing ? null : (value) => _toggleUserHistory(user['id'], isHistoryEnabled),
                                               ),
                                             ),
                                           ],
@@ -425,7 +565,7 @@ class _AdminPageState extends State<AdminPage> with SingleTickerProviderStateMix
                                       ],
                                     ),
                                     const SizedBox(height: 8),
-                                    Text('Email: ${user['email']}', style: const TextStyle(fontSize: 13, color: Colors.blueGrey)),
+                                    Text('Email: ${user['email'] ?? 'N/A'}', style: const TextStyle(fontSize: 13, color: Colors.blueGrey)),
                                     const SizedBox(height: 12),
                                     const Text('Vehículos:', style: TextStyle(fontWeight: FontWeight.bold)),
                                     if (vehicles.isEmpty)
@@ -434,10 +574,16 @@ class _AdminPageState extends State<AdminPage> with SingleTickerProviderStateMix
                                         child: Text('No tiene vehículos registrados', style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic)),
                                       )
                                     else
-                                      ...vehicles.map((v) => Padding(
-                                        padding: const EdgeInsets.only(left: 8.0, top: 2.0),
-                                        child: Text('• ${v['brand']} ${v['model']} - Placa: ${v['plate']}', style: const TextStyle(fontSize: 12)),
-                                      )),
+                                      ...vehicles.map((v) {
+                                        final String brand = v['brand'] ?? '';
+                                        final String model = v['model'] ?? '';
+                                        final String plate = v['plate'] ?? 'N/A';
+                                        final String vehicleInfo = '${brand} ${model}'.trim();
+                                        return Padding(
+                                          padding: const EdgeInsets.only(left: 8.0, top: 2.0),
+                                          child: Text('• ${vehicleInfo.isEmpty ? 'Vehículo' : vehicleInfo} - Placa: $plate', style: const TextStyle(fontSize: 12)),
+                                        );
+                                      }),
                                     
                                     const SizedBox(height: 12),
                                     const Text('Contactos de Emergencia:', style: TextStyle(fontWeight: FontWeight.bold)),
@@ -447,10 +593,15 @@ class _AdminPageState extends State<AdminPage> with SingleTickerProviderStateMix
                                         child: Text('No tiene contactos registrados', style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic)),
                                       )
                                     else
-                                      ...contacts.map((c) => Padding(
-                                        padding: const EdgeInsets.only(left: 8.0, top: 2.0),
-                                        child: Text('• ${c['name']} (${c['relationship']}): ${c['phone']}', style: const TextStyle(fontSize: 12)),
-                                      )),
+                                      ...contacts.map((c) {
+                                        final String name = c['name'] ?? 'N/A';
+                                        final String relationship = c['relationship'] != null ? ' (${c['relationship']})' : '';
+                                        final String phone = c['phone'] ?? 'N/A';
+                                        return Padding(
+                                          padding: const EdgeInsets.only(left: 8.0, top: 2.0),
+                                          child: Text('• $name$relationship: $phone', style: const TextStyle(fontSize: 12)),
+                                        );
+                                      }),
                                     const SizedBox(height: 8),
                                   ],
                                 ),
@@ -472,12 +623,10 @@ class _AdminPageState extends State<AdminPage> with SingleTickerProviderStateMix
           padding: const EdgeInsets.all(8.0),
           child: TextField(
             controller: _unitSearchController,
+            enabled: !_isProcessing,
             decoration: InputDecoration(
               hintText: 'Buscar unidad...',
               prefixIcon: const Icon(Icons.search),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
               suffixIcon: _unitSearchController.text.isNotEmpty
                   ? IconButton(
                       icon: const Icon(Icons.clear),
@@ -511,24 +660,62 @@ class _AdminPageState extends State<AdminPage> with SingleTickerProviderStateMix
                               children: [
                                 ListTile(
                                   leading: Icon(Icons.business, color: isActive ? Colors.indigo : Colors.grey),
-                                  title: Text(unit['name'], style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    color: isActive ? Colors.black : Colors.grey,
-                                  )),
+                                  title: Row(
+                                    children: [
+                                      Expanded(
+                                        child: Text(unit['name'], style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          color: isActive ? Colors.black : Colors.grey,
+                                        )),
+                                      ),
+                                      if (unit['code'] != null)
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                          decoration: BoxDecoration(
+                                            color: Colors.amber[100],
+                                            borderRadius: BorderRadius.circular(4),
+                                            border: Border.all(color: Colors.amber[300]!),
+                                          ),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Text(
+                                                unit['code'],
+                                                style: const TextStyle(
+                                                  fontSize: 12,
+                                                  fontWeight: FontWeight.bold,
+                                                  fontFamily: 'monospace',
+                                                ),
+                                              ),
+                                              const SizedBox(width: 4),
+                                              InkWell(
+                                                onTap: _isProcessing ? null : () {
+                                                  Clipboard.setData(ClipboardData(text: unit['code']));
+                                                  ScaffoldMessenger.of(context).showSnackBar(
+                                                    SnackBar(content: Text('Código ${unit['code']} copiado')),
+                                                  );
+                                                },
+                                                child: const Icon(Icons.copy, size: 14, color: Colors.brown),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                    ],
+                                  ),
                                   subtitle: Text('${unit['description'] ?? 'Sin descripción'}\nPropietarios: $userCount'),
                                   trailing: Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
                                       IconButton(
                                         icon: const Icon(Icons.edit, color: Colors.blue),
-                                        onPressed: () => _showEditUnitDialog(unit),
+                                        onPressed: _isProcessing ? null : () => _showEditUnitDialog(unit),
                                         tooltip: 'Editar',
                                       ),
                                       IconButton(
                                         icon: const Icon(Icons.delete_outline, color: Colors.red),
-                                        onPressed: userCount == 0 
+                                        onPressed: (userCount == 0 && !_isProcessing)
                                           ? () => _deleteUnit(unit['id'], unit['name'])
-                                          : null, // Deshabilitado si tiene propietarios
+                                          : null, // Deshabilitado si tiene propietarios o está procesando
                                         tooltip: userCount == 0 ? 'Eliminar' : 'No se puede eliminar (tiene propietarios)',
                                       ),
                                     ],
@@ -548,7 +735,7 @@ class _AdminPageState extends State<AdminPage> with SingleTickerProviderStateMix
                                           Switch(
                                             value: isActive,
                                             activeColor: Colors.green,
-                                            onChanged: (value) => _toggleUnitActive(unit['id'], isActive),
+                                            onChanged: _isProcessing ? null : (value) => _toggleUnitActive(unit['id'], isActive),
                                           ),
                                         ],
                                       ),
@@ -557,7 +744,7 @@ class _AdminPageState extends State<AdminPage> with SingleTickerProviderStateMix
                                           const Text('Historial: ', style: TextStyle(fontSize: 12)),
                                           Switch(
                                             value: isHistoryEnabled,
-                                            onChanged: (value) => _toggleUnitHistory(unit['id'], isHistoryEnabled),
+                                            onChanged: _isProcessing ? null : (value) => _toggleUnitHistory(unit['id'], isHistoryEnabled),
                                           ),
                                         ],
                                       ),

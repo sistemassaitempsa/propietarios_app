@@ -3,14 +3,17 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiService {
-  final String baseUrl = "https://tu-api.com/api"; // Reemplaza con tu URL real
-
+  // CONFIGURACIÓN GLOBAL: Cambia esta URL para apuntar a tu servidor
+  static const String baseUrl =
+     "http://10.0.2.2:8000/api"; // Emulador Android
+      // "http://192.168.1.19:8000/api"; // Servidor en red local (Cambia esta IP por la de tu PC)
+  // php artisan serve --host=0.0.0.0 --port=8000 comando para servir en toda la red local
   // --- Manejo del Token ---
 
   Future<Map<String, String>> _getHeaders() async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('auth_token');
-    
+
     final headers = {'Content-Type': 'application/json'};
     if (token != null) {
       headers['Authorization'] = 'Bearer $token';
@@ -30,7 +33,9 @@ class ApiService {
 
   // --- Usuarios (Users) ---
 
-  Future<Map<String, dynamic>?> registerUser(Map<String, dynamic> userData) async {
+  Future<Map<String, dynamic>?> registerUser(
+    Map<String, dynamic> userData,
+  ) async {
     try {
       final headers = await _getHeaders();
       final response = await http.post(
@@ -38,7 +43,7 @@ class ApiService {
         headers: headers,
         body: jsonEncode(userData),
       );
-      return response.statusCode == 201 ? jsonDecode(response.body) : null;
+      return jsonDecode(response.body);
     } catch (e) {
       return null;
     }
@@ -48,19 +53,72 @@ class ApiService {
     try {
       final response = await http.post(
         Uri.parse('$baseUrl/users/login'),
-        headers: {'Content-Type': 'application/json'}, // Sin token para login
+        headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'email': email, 'password': password}),
       );
-      return response.statusCode == 200 ? jsonDecode(response.body) : null;
+
+      final Map<String, dynamic> data = jsonDecode(response.body);
+
+      if (response.statusCode == 200) {
+        return data;
+      } else if (response.statusCode == 403) {
+        // Cuenta inactiva
+        throw Exception(data['error'] ?? 'Cuenta inactiva');
+      } else {
+        return null;
+      }
     } catch (e) {
+      if (e.toString().contains('inactiva')) rethrow;
       return null;
+    }
+  }
+
+  Future<List<dynamic>> getNeighbors() async {
+    try {
+      final headers = await _getHeaders();
+      final response = await http.get(
+        Uri.parse('$baseUrl/users/neighbors'),
+        headers: headers,
+      );
+      return response.statusCode == 200 ? jsonDecode(response.body) : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  Future<bool> reportUser(int userId) async {
+    try {
+      final headers = await _getHeaders();
+      final response = await http.post(
+        Uri.parse('$baseUrl/users/$userId/report'),
+        headers: headers,
+      );
+      return response.statusCode == 200;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  Future<bool> activateUser(int userId) async {
+    try {
+      final headers = await _getHeaders();
+      final response = await http.post(
+        Uri.parse('$baseUrl/users/$userId/activate'),
+        headers: headers,
+      );
+      return response.statusCode == 200;
+    } catch (e) {
+      return false;
     }
   }
 
   Future<Map<String, dynamic>?> getUserProfile(int userId) async {
     try {
       final headers = await _getHeaders();
-      final response = await http.get(Uri.parse('$baseUrl/users/$userId'), headers: headers);
+      final response = await http.get(
+        Uri.parse('$baseUrl/users/$userId'),
+        headers: headers,
+      );
       return response.statusCode == 200 ? jsonDecode(response.body) : null;
     } catch (e) {
       return null;
@@ -75,9 +133,113 @@ class ApiService {
         headers: headers,
         body: jsonEncode(data),
       );
+
+      return response.statusCode >= 200 && response.statusCode < 300;
+    } catch (e) {
+      print('💥 Error updateUser: $e');
+      return false;
+    }
+  }
+
+  Future<String?> uploadProfileImage(int userId, String imagePath) async {
+    try {
+      final headers = await _getHeaders();
+      var request = http.MultipartRequest(
+        'POST',
+        Uri.parse('$baseUrl/users/$userId/upload-image'),
+      );
+      request.headers.addAll(headers);
+      request.files.add(await http.MultipartFile.fromPath('image', imagePath));
+
+      var streamedResponse = await request.send();
+      var response = await http.Response.fromStream(streamedResponse);
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return data['url']; // Devuelve la URL pública de la imagen
+      }
+      return null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  // --- Unidades (Units) ---
+
+  Future<List<dynamic>> getUnits() async {
+    try {
+      final headers = await _getHeaders();
+      final response = await http.get(
+        Uri.parse('$baseUrl/units'),
+        headers: headers,
+      );
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      }
+      return [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  Future<Map<String, dynamic>?> findUnitByCode(String code) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/units/code/$code'),
+        headers: {'Content-Type': 'application/json'},
+      );
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      }
+      return null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  Future<Map<String, dynamic>?> addUnit(Map<String, dynamic> unitData) async {
+    try {
+      final headers = await _getHeaders();
+      final response = await http.post(
+        Uri.parse('$baseUrl/units'),
+        headers: headers,
+        body: jsonEncode(unitData),
+      );
+      return response.statusCode == 201 ? jsonDecode(response.body) : null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  Future<bool> toggleUnitActive(int unitId, bool active) async {
+    try {
+      final headers = await _getHeaders();
+      final response = await http.post(
+        Uri.parse('$baseUrl/units/$unitId/toggle-active'),
+        headers: headers,
+        body: jsonEncode({'active': active}),
+      );
       return response.statusCode == 200;
     } catch (e) {
       return false;
+    }
+  }
+
+  Future<String?> deleteUnit(int unitId) async {
+    try {
+      final headers = await _getHeaders();
+      final response = await http.delete(
+        Uri.parse('$baseUrl/units/$unitId'),
+        headers: headers,
+      );
+      final data = jsonDecode(response.body);
+      if (response.statusCode == 200) {
+        return null; // Éxito
+      } else {
+        return data['message'] ?? 'Error al eliminar unidad';
+      }
+    } catch (e) {
+      return 'Error de conexión';
     }
   }
 
@@ -88,7 +250,7 @@ class ApiService {
       final headers = await _getHeaders();
       final response = await http.get(
         Uri.parse('$baseUrl/emergency-contacts?user_id=$userId'),
-        headers: headers
+        headers: headers,
       );
       return response.statusCode == 200 ? jsonDecode(response.body) : [];
     } catch (e) {
@@ -96,7 +258,9 @@ class ApiService {
     }
   }
 
-  Future<bool> addEmergencyContact(Map<String, dynamic> contactData) async {
+  Future<Map<String, dynamic>?> addEmergencyContact(
+    Map<String, dynamic> contactData,
+  ) async {
     try {
       final headers = await _getHeaders();
       final response = await http.post(
@@ -104,7 +268,34 @@ class ApiService {
         headers: headers,
         body: jsonEncode(contactData),
       );
-      return response.statusCode == 201;
+      return response.statusCode == 201 ? jsonDecode(response.body) : null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  Future<bool> updateEmergencyContact(int id, Map<String, dynamic> data) async {
+    try {
+      final headers = await _getHeaders();
+      final response = await http.put(
+        Uri.parse('$baseUrl/emergency-contacts/$id'),
+        headers: headers,
+        body: jsonEncode(data),
+      );
+      return response.statusCode == 200;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  Future<bool> deleteEmergencyContact(int id) async {
+    try {
+      final headers = await _getHeaders();
+      final response = await http.delete(
+        Uri.parse('$baseUrl/emergency-contacts/$id'),
+        headers: headers,
+      );
+      return response.statusCode == 200;
     } catch (e) {
       return false;
     }
@@ -117,7 +308,7 @@ class ApiService {
       final headers = await _getHeaders();
       final response = await http.get(
         Uri.parse('$baseUrl/vehicles?user_id=$userId'),
-        headers: headers
+        headers: headers,
       );
       return response.statusCode == 200 ? jsonDecode(response.body) : [];
     } catch (e) {
@@ -125,7 +316,9 @@ class ApiService {
     }
   }
 
-  Future<bool> addVehicle(Map<String, dynamic> vehicleData) async {
+  Future<Map<String, dynamic>?> addVehicle(
+    Map<String, dynamic> vehicleData,
+  ) async {
     try {
       final headers = await _getHeaders();
       final response = await http.post(
@@ -133,23 +326,50 @@ class ApiService {
         headers: headers,
         body: jsonEncode(vehicleData),
       );
-      return response.statusCode == 201;
+      return response.statusCode == 201 ? jsonDecode(response.body) : null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  Future<bool> updateVehicle(int id, Map<String, dynamic> data) async {
+    try {
+      final headers = await _getHeaders();
+      final response = await http.put(
+        Uri.parse('$baseUrl/vehicles/$id'),
+        headers: headers,
+        body: jsonEncode(data),
+      );
+      return response.statusCode == 200;
     } catch (e) {
       return false;
     }
   }
 
-  Future<Map<String, dynamic>?> searchByPlate(String plate, {int? userId}) async {
+  Future<bool> deleteVehicle(int id) async {
+    try {
+      final headers = await _getHeaders();
+      final response = await http.delete(
+        Uri.parse('$baseUrl/vehicles/$id'),
+        headers: headers,
+      );
+      return response.statusCode == 200;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  Future<Map<String, dynamic>?> searchByPlate(
+    String plate, {
+    int? userId,
+  }) async {
     try {
       final headers = await _getHeaders();
       String url = '$baseUrl/search/plate/$plate';
       if (userId != null) {
         url += '?user_id=$userId';
       }
-      final response = await http.get(
-        Uri.parse(url),
-        headers: headers,
-      );
+      final response = await http.get(Uri.parse(url), headers: headers);
       return response.statusCode == 200 ? jsonDecode(response.body) : null;
     } catch (e) {
       return null;
@@ -213,18 +433,22 @@ class ApiService {
     }
   }
 
-  Future<List<dynamic>> getAllUsers({String? name, String? unit, String? plate}) async {
+  Future<List<dynamic>> getAllUsers({
+    String? name,
+    String? unit,
+    String? plate,
+  }) async {
     try {
       final headers = await _getHeaders();
       String url = '$baseUrl/admin/users?';
-      if (name != null && name.isNotEmpty) url += 'name=${Uri.encodeComponent(name)}&';
-      if (unit != null && unit.isNotEmpty) url += 'unit=${Uri.encodeComponent(unit)}&';
-      if (plate != null && plate.isNotEmpty) url += 'plate=${Uri.encodeComponent(plate)}&';
+      if (name != null && name.isNotEmpty)
+        url += 'name=${Uri.encodeComponent(name)}&';
+      if (unit != null && unit.isNotEmpty)
+        url += 'unit=${Uri.encodeComponent(unit)}&';
+      if (plate != null && plate.isNotEmpty)
+        url += 'plate=${Uri.encodeComponent(plate)}&';
 
-      final response = await http.get(
-        Uri.parse('$baseUrl/search/plate/$plate'),
-        headers: headers
-      );
+      final response = await http.get(Uri.parse(url), headers: headers);
       return response.statusCode == 200 ? jsonDecode(response.body) : [];
     } catch (e) {
       return [];
@@ -238,17 +462,17 @@ class ApiService {
       if (name != null && name.isNotEmpty) {
         url += '?name=${Uri.encodeComponent(name)}';
       }
-      final response = await http.get(
-        Uri.parse(url),
-        headers: headers,
-      );
+      final response = await http.get(Uri.parse(url), headers: headers);
       return response.statusCode == 200 ? jsonDecode(response.body) : [];
     } catch (e) {
       return [];
     }
   }
 
-  Future<Map<String, dynamic>?> updateUnit(int id, Map<String, dynamic> data) async {
+  Future<Map<String, dynamic>?> updateUnit(
+    int id,
+    Map<String, dynamic> data,
+  ) async {
     try {
       final headers = await _getHeaders();
       final response = await http.put(

@@ -23,6 +23,7 @@ class _LoginPageState extends State<LoginPage> {
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _towerController = TextEditingController();
   final TextEditingController _apartmentController = TextEditingController();
+  final TextEditingController _unitCodeController = TextEditingController();
   
   bool _isPasswordVisible = false;
   bool _isRegisterMode = false;
@@ -30,7 +31,9 @@ class _LoginPageState extends State<LoginPage> {
   final ApiService _apiService = ApiService();
   final DataRepository _repository = DataRepository();
 
+  bool _isLoading = false;
   bool _isLoadingUnits = false;
+  bool _isPressed = false;
   List<Map<String, dynamic>> _availableUnits = [];
   int? _selectedUnitId;
   bool _isAcceptedTerms = false;
@@ -127,6 +130,8 @@ class _LoginPageState extends State<LoginPage> {
       return;
     }
 
+    setState(() => _isLoading = true);
+
     try {
       final response = await _repository.login(email, password);
       if (response != null) {
@@ -142,6 +147,10 @@ class _LoginPageState extends State<LoginPage> {
         _showInactiveAccountDialog();
       } else {
         _showMsg('Error al iniciar sesión: $e');
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
       }
     }
   }
@@ -176,14 +185,10 @@ class _LoginPageState extends State<LoginPage> {
     String password = _passwordController.text;
     String firstName = _firstNameController.text;
     String lastName = _lastNameController.text;
+    String unitCode = _unitCodeController.text.trim();
 
-    if (email.isEmpty || password.isEmpty || firstName.isEmpty || lastName.isEmpty) {
-      _showMsg('Nombre, apellido, correo y contraseña son obligatorios');
-      return;
-    }
-
-    if (_selectedUnitId == null) {
-      _showMsg('Debes seleccionar una unidad');
+    if (email.isEmpty || password.isEmpty || firstName.isEmpty || lastName.isEmpty || unitCode.isEmpty) {
+      _showMsg('Todos los campos son obligatorios, incluido el código de unidad');
       return;
     }
 
@@ -192,27 +197,45 @@ class _LoginPageState extends State<LoginPage> {
       return;
     }
 
-    // Preparar datos para la API (necesita 'name') y local
-    Map<String, dynamic> userData = {
-      'name': '$firstName $lastName',
-      'firstName': firstName,
-      'lastName': lastName,
-      'phone': _phoneController.text,
-      'tower': _towerController.text,
-      'apartment': _apartmentController.text,
-      'unit_id': _selectedUnitId,
-    };
+    setState(() => _isLoading = true);
 
-    bool success = await _repository.register(email, password, userData);
+    try {
+      final unit = await _apiService.findUnitByCode(unitCode);
 
-    if (success) {
-      _showMsg('Usuario registrado con éxito en el servidor');
-      setState(() {
-        _isRegisterMode = false;
-        _isAcceptedTerms = false; // Reset for next time
-      });
-    } else {
-      _showMsg('Error al registrar usuario. Posiblemente el correo ya existe o falla de conexión.');
+      if (unit == null) {
+        _showMsg('El código de unidad no es válido');
+        setState(() => _isLoading = false);
+        return;
+      }
+
+      // Preparar datos para la API (necesita 'name') y local
+      Map<String, dynamic> userData = {
+        'name': '$firstName $lastName',
+        'firstName': firstName,
+        'lastName': lastName,
+        'phone': _phoneController.text,
+        'tower': _towerController.text,
+        'apartment': _apartmentController.text,
+        'unit_id': unit['id'],
+      };
+
+      bool success = await _repository.register(email, password, userData);
+
+      if (success) {
+        _showMsg('Usuario registrado con éxito en el servidor');
+        setState(() {
+          _isRegisterMode = false;
+          _isAcceptedTerms = false; // Reset for next time
+        });
+      } else {
+        _showMsg('Error al registrar usuario. Posiblemente el correo ya existe o falla de conexión.');
+      }
+    } catch (e) {
+      _showMsg('Error al registrar: $e');
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
@@ -260,6 +283,51 @@ class _LoginPageState extends State<LoginPage> {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
   }
 
+  void _showForgotPasswordDialog() {
+    final TextEditingController resetEmailController = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('Recuperar Contraseña', style: TextStyle(fontWeight: FontWeight.bold)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'Ingresa tu correo electrónico y te enviaremos un código para restablecer tu contraseña.',
+              style: TextStyle(fontSize: 14, color: Colors.blueGrey),
+            ),
+            const SizedBox(height: 20),
+            _buildTextField(resetEmailController, 'Correo Electrónico', Icons.email_outlined, type: TextInputType.emailAddress),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('CANCELAR', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              if (resetEmailController.text.isNotEmpty) {
+                // Aquí se llamaría a la API en el futuro
+                Navigator.pop(context);
+                _showMsg('Si el correo está registrado, recibirás las instrucciones en breve.');
+              } else {
+                _showMsg('Por favor, ingresa tu correo');
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.indigo,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            child: const Text('ENVIAR'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildTextField(TextEditingController controller, String label, IconData icon, {TextInputType type = TextInputType.text}) {
     return Container(
       decoration: BoxDecoration(
@@ -267,9 +335,9 @@ class _LoginPageState extends State<LoginPage> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            color: Colors.black.withOpacity(0.02),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
@@ -281,14 +349,6 @@ class _LoginPageState extends State<LoginPage> {
           labelText: label,
           labelStyle: TextStyle(color: Colors.blueGrey[400], fontSize: 14),
           prefixIcon: Icon(icon, color: Colors.indigo[400], size: 22),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(16),
-            borderSide: BorderSide.none,
-          ),
-          filled: true,
-          fillColor: Colors.white,
-          contentPadding: const EdgeInsets.symmetric(vertical: 18, horizontal: 16),
-          floatingLabelBehavior: FloatingLabelBehavior.never,
           hintText: label,
           hintStyle: TextStyle(color: Colors.blueGrey[200], fontSize: 14),
         ),
@@ -303,9 +363,9 @@ class _LoginPageState extends State<LoginPage> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            color: Colors.black.withOpacity(0.02),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
@@ -325,48 +385,10 @@ class _LoginPageState extends State<LoginPage> {
             ),
             onPressed: () => setState(() => _isPasswordVisible = !_isPasswordVisible),
           ),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(16),
-            borderSide: BorderSide.none,
-          ),
-          filled: true,
-          fillColor: Colors.white,
-          contentPadding: const EdgeInsets.symmetric(vertical: 18, horizontal: 16),
-          floatingLabelBehavior: FloatingLabelBehavior.never,
           hintText: 'Contraseña',
           hintStyle: TextStyle(color: Colors.blueGrey[200], fontSize: 14),
         ),
       ),
-    );
-  }
-
-  DropdownButtonFormField<int> _buildUnitDropdown() {
-    return DropdownButtonFormField<int>(
-      value: _selectedUnitId,
-      icon: _isLoadingUnits 
-        ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-        : Icon(Icons.keyboard_arrow_down_rounded, color: Colors.blueGrey[400]),
-      decoration: InputDecoration(
-        labelText: 'Unidad/Conjunto',
-        labelStyle: TextStyle(color: Colors.blueGrey[400], fontSize: 14),
-        filled: true,
-        fillColor: Colors.white,
-        prefixIcon: Icon(Icons.business_rounded, color: Colors.indigo[400], size: 22),
-        contentPadding: const EdgeInsets.symmetric(vertical: 18, horizontal: 16),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: BorderSide.none,
-        ),
-      ),
-      items: _availableUnits.isEmpty 
-        ? [const DropdownMenuItem(value: null, child: Text('No hay unidades disponibles', style: TextStyle(color: Colors.red)))]
-        : _availableUnits.map((unit) {
-            return DropdownMenuItem<int>(
-              value: unit['id'],
-              child: Text(unit['name'], style: const TextStyle(fontSize: 15)),
-            );
-          }).toList(),
-      onChanged: _isLoadingUnits ? null : (val) => setState(() => _selectedUnitId = val),
     );
   }
 
@@ -441,9 +463,30 @@ class _LoginPageState extends State<LoginPage> {
                 const SizedBox(height: 16),
                 _buildPasswordField(),
                 
+                /* // Opción oculta temporalmente
+                if (!_isRegisterMode) 
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      onPressed: () {
+                        // Navegar a pantalla de recuperación o mostrar diálogo
+                        _showForgotPasswordDialog();
+                      },
+                      style: TextButton.styleFrom(
+                        foregroundColor: Colors.indigo[600],
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                      ),
+                      child: const Text(
+                        '¿Olvidaste tu contraseña?',
+                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                  ),
+                */
+
                 if (_isRegisterMode) ...[
                   const SizedBox(height: 16),
-                  _buildUnitDropdown(),
+                  _buildTextField(_unitCodeController, 'Código de Unidad Residencial', Icons.business_rounded),
                   const SizedBox(height: 16),
                   Row(
                     children: [
@@ -459,34 +502,52 @@ class _LoginPageState extends State<LoginPage> {
                 const SizedBox(height: 32),
                 
                 // Primary Action Button
-                Container(
-                  width: double.infinity,
-                  height: 58,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(16),
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF3949AB), Color(0xFF1A237E)],
-                      begin: Alignment.centerLeft,
-                      end: Alignment.centerRight,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.indigo.withOpacity(0.3),
-                        blurRadius: 12,
-                        offset: const Offset(0, 6),
+                GestureDetector(
+                  onTapDown: (_) => setState(() => _isPressed = true),
+                  onTapUp: (_) => setState(() => _isPressed = false),
+                  onTapCancel: () => setState(() => _isPressed = false),
+                  child: AnimatedScale(
+                    scale: _isPressed ? 0.96 : 1.0,
+                    duration: const Duration(milliseconds: 100),
+                    child: Container(
+                      width: double.infinity,
+                      height: 58,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(16),
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF3949AB), Color(0xFF1A237E)],
+                          begin: Alignment.centerLeft,
+                          end: Alignment.centerRight,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.indigo.withOpacity(_isPressed ? 0.1 : 0.3),
+                            blurRadius: _isPressed ? 4 : 12,
+                            offset: Offset(0, _isPressed ? 2 : 6),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
-                  child: ElevatedButton(
-                    onPressed: _isRegisterMode ? _register : _login,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.transparent,
-                      shadowColor: Colors.transparent,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                    ),
-                    child: Text(
-                      _isRegisterMode ? 'REGISTRARSE' : 'INICIAR SESIÓN', 
-                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white, letterSpacing: 1),
+                      child: ElevatedButton(
+                        onPressed: _isLoading ? null : (_isRegisterMode ? _register : _login),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.transparent,
+                          shadowColor: Colors.transparent,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        ),
+                        child: _isLoading 
+                          ? const SizedBox(
+                              height: 24,
+                              width: 24,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 3,
+                              ),
+                            )
+                          : Text(
+                              _isRegisterMode ? 'REGISTRARSE' : 'INICIAR SESIÓN', 
+                              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white, letterSpacing: 1),
+                            ),
+                      ),
                     ),
                   ),
                 ),
